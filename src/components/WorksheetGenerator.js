@@ -146,8 +146,8 @@ const DIFFICULTY_LEVELS = {
     ranges: {
       addition: { max: 100, maxFirstNum: 50 },
       subtraction: { max: 100, maxFirstNum: 100 },
-      multiplication: { max: 12, maxFirstNum: 12 },
-      division: { max: 100, maxDivisor: 12 }
+      multiplication: { max: 144, maxFirstNum: 12 },
+      division: { max: 144, maxDivisor: 12 }
     }
   }
 };
@@ -199,33 +199,26 @@ const WorksheetGenerator = () => {
     settings.selectedOperations.division
   ]);
 
-  const handleSettingsChange = (field) => (event) => {
-    const newValue = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-    
-    if (field === 'numberOfProblems') {
-      // Ensure number is at least 10
-      const numProblems = Math.max(10, parseInt(newValue) || 10);
+  const handleSettingsChange = (field, value) => {
+    if (field === 'difficulty') {
+      // When changing difficulty, preserve ALL current operation settings
       setSettings(prev => ({
         ...prev,
-        numberOfProblems: numProblems
+        difficulty: value
       }));
-      return;
-    }
-
-    if (field.startsWith('selectedOperations.')) {
+    } else if (field.startsWith('selectedOperations.')) {
       const operation = field.split('.')[1];
       setSettings(prev => {
-        // Create new settings object with updated operation
         const newSettings = {
           ...prev,
           selectedOperations: {
             ...prev.selectedOperations,
-            [operation]: newValue
+            [operation]: value
           }
         };
         
         // Check if at least one operation is selected
-        const hasSelectedOperation = Object.values(newSettings.selectedOperations).some(value => value);
+        const hasSelectedOperation = Object.values(newSettings.selectedOperations).some(val => val);
         
         // If no operations are selected, keep the current operation enabled
         if (!hasSelectedOperation) {
@@ -234,15 +227,10 @@ const WorksheetGenerator = () => {
         
         return newSettings;
       });
-    } else if (field === 'difficulty') {
-      setSettings(prev => ({
-        ...prev,
-        difficulty: newValue
-      }));
     } else {
       setSettings(prev => ({
         ...prev,
-        [field]: newValue
+        [field]: value
       }));
     }
   };
@@ -335,11 +323,12 @@ const WorksheetGenerator = () => {
       if (!targetAnswer) continue;
 
       let problemGenerated = false;
-      let originalOperationIndex = operationIndex;
+      let operationsAttempted = new Set();
       
       // Try each operation until we successfully generate a problem
-      do {
+      while (!problemGenerated && operationsAttempted.size < availableOperations.length) {
         const operation = availableOperations[operationIndex];
+        operationsAttempted.add(operation);
         operationIndex = (operationIndex + 1) % availableOperations.length;
         
         switch (operation) {
@@ -378,60 +367,58 @@ const WorksheetGenerator = () => {
             break;
           }
           case '×': {
-            if (targetAnswer <= ranges.multiplication.max * ranges.multiplication.max) {
-              const factors = [];
-              for (let i = 1; i <= Math.min(Math.sqrt(targetAnswer), ranges.multiplication.maxFirstNum); i++) {
-                if (targetAnswer % i === 0) {
-                  const otherFactor = targetAnswer / i;
-                  if (otherFactor <= ranges.multiplication.maxFirstNum) {
-                    factors.push([i, otherFactor]);
-                  }
+            // Try to find factors that work within the multiplication range
+            const factors = [];
+            for (let i = 1; i <= Math.sqrt(targetAnswer); i++) {
+              if (targetAnswer % i === 0) {
+                const j = targetAnswer / i;
+                if (i <= ranges.multiplication.maxFirstNum && j <= ranges.multiplication.maxFirstNum) {
+                  factors.push([i, j]);
                 }
               }
-              
-              if (factors.length > 0) {
-                const [firstNum, secondNum] = factors[Math.floor(Math.random() * factors.length)];
-                problems.push({ 
-                  firstNum, 
-                  secondNum, 
-                  operation: '×', 
-                  answer: targetAnswer,
-                  letter: letter
-                });
-                problemGenerated = true;
-              }
+            }
+            
+            if (factors.length > 0) {
+              const [firstNum, secondNum] = factors[Math.floor(Math.random() * factors.length)];
+              problems.push({ 
+                firstNum, 
+                secondNum, 
+                operation: '×', 
+                answer: targetAnswer,
+                letter: letter
+              });
+              problemGenerated = true;
             }
             break;
           }
           case '÷': {
-            if (targetAnswer <= ranges.division.maxDivisor) {
-              const possibleDivisors = [];
-              for (let i = 2; i <= ranges.division.maxDivisor; i++) {
-                const dividend = targetAnswer * i;
-                if (dividend <= ranges.division.max) {
-                  possibleDivisors.push(i);
-                }
+            // Try to find a valid divisor that works within the division range
+            const possibleDivisors = [];
+            for (let i = 2; i <= ranges.division.maxDivisor; i++) {
+              const dividend = targetAnswer * i;
+              if (dividend <= ranges.division.max) {
+                possibleDivisors.push(i);
               }
-              
-              if (possibleDivisors.length > 0) {
-                const divisor = possibleDivisors[Math.floor(Math.random() * possibleDivisors.length)];
-                const dividend = targetAnswer * divisor;
-                problems.push({ 
-                  firstNum: dividend, 
-                  secondNum: divisor, 
-                  operation: '÷', 
-                  answer: targetAnswer,
-                  letter: letter
-                });
-                problemGenerated = true;
-              }
+            }
+            
+            if (possibleDivisors.length > 0) {
+              const divisor = possibleDivisors[Math.floor(Math.random() * possibleDivisors.length)];
+              const dividend = targetAnswer * divisor;
+              problems.push({ 
+                firstNum: dividend, 
+                secondNum: divisor, 
+                operation: '÷', 
+                answer: targetAnswer,
+                letter: letter
+              });
+              problemGenerated = true;
             }
             break;
           }
         }
-      } while (!problemGenerated && operationIndex !== originalOperationIndex);
+      }
 
-      // If no operation worked, force an addition problem
+      // If no operation worked, try addition as a fallback
       if (!problemGenerated) {
         const maxFirstNum = Math.min(targetAnswer - 1, ranges.addition.maxFirstNum);
         if (maxFirstNum > 0) {
@@ -492,16 +479,18 @@ const WorksheetGenerator = () => {
             break;
           }
           case '×': {
+            // Generate random multiplication problem within range
             const maxNum = ranges.multiplication.maxFirstNum;
             const firstNum = Math.floor(Math.random() * maxNum) + 1;
             const secondNum = Math.floor(Math.random() * maxNum) + 1;
             const answer = firstNum * secondNum;
-            if (answer <= ranges.multiplication.max * ranges.multiplication.max && !usedAnswers.has(answer)) {
+            if (answer <= ranges.multiplication.max && !usedAnswers.has(answer)) {
               potentialProblem = { firstNum, secondNum, operation, answer };
             }
             break;
           }
           case '÷': {
+            // Generate random division problem within range
             const maxDivisor = ranges.division.maxDivisor;
             const divisor = Math.floor(Math.random() * (maxDivisor - 1)) + 2;
             const maxQuotient = Math.floor(ranges.division.max / divisor);
@@ -577,7 +566,9 @@ const WorksheetGenerator = () => {
                   control={
                     <Switch
                       checked={settings.includeCodeBreaker}
-                      onChange={handleSettingsChange('includeCodeBreaker')}
+                      onChange={(e) => {
+                        handleSettingsChange('includeCodeBreaker', e.target.checked);
+                      }}
                       color="warning"
                     />
                   }
@@ -599,7 +590,9 @@ const WorksheetGenerator = () => {
                   <InputLabel>Theme</InputLabel>
                   <Select
                     value={settings.theme}
-                    onChange={handleSettingsChange('theme')}
+                    onChange={(e) => {
+                      handleSettingsChange('theme', e.target.value);
+                    }}
                     label="Theme"
                   >
                     {Object.entries(THEMES).map(([key, theme]) => (
@@ -611,7 +604,9 @@ const WorksheetGenerator = () => {
                   <InputLabel>Difficulty</InputLabel>
                   <Select
                     value={settings.difficulty}
-                    onChange={handleSettingsChange('difficulty')}
+                    onChange={(e) => {
+                      handleSettingsChange('difficulty', e.target.value);
+                    }}
                     label="Difficulty"
                   >
                     {Object.entries(DIFFICULTY_LEVELS).map(([key, level]) => (
@@ -649,8 +644,8 @@ const WorksheetGenerator = () => {
                         <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
                           <li>Addition: numbers up to 100</li>
                           <li>Subtraction: numbers up to 100</li>
-                          <li>Multiplication: numbers up to 12 (full times tables)</li>
-                          <li>Division: numbers up to 100, divisors up to 12</li>
+                          <li>Multiplication: numbers up to 144 (full times tables)</li>
+                          <li>Division: numbers up to 144, divisors up to 12</li>
                         </ul>
                         Challenging problems for advanced students.
                       </>
@@ -661,7 +656,9 @@ const WorksheetGenerator = () => {
                   fullWidth
                   label="Worksheet Title"
                   value={settings.title}
-                  onChange={handleSettingsChange('title')}
+                  onChange={(e) => {
+                    handleSettingsChange('title', e.target.value);
+                  }}
                   margin="normal"
                 />
                 <TextField
@@ -669,7 +666,9 @@ const WorksheetGenerator = () => {
                   label="Number of Problems"
                   type="number"
                   value={settings.numberOfProblems}
-                  onChange={handleSettingsChange('numberOfProblems')}
+                  onChange={(e) => {
+                    handleSettingsChange('numberOfProblems', parseInt(e.target.value) || 10);
+                  }}
                   margin="normal"
                   inputProps={{ 
                     min: 10,
@@ -682,14 +681,18 @@ const WorksheetGenerator = () => {
                   label="Maximum Number"
                   type="number"
                   value={settings.maxNumber}
-                  onChange={handleSettingsChange('maxNumber')}
+                  onChange={(e) => {
+                    handleSettingsChange('maxNumber', parseInt(e.target.value) || 100);
+                  }}
                   margin="normal"
                 />
                 <TextField
                   fullWidth
                   label="Secret Message"
                   value={settings.secretMessage}
-                  onChange={handleSettingsChange('secretMessage')}
+                  onChange={(e) => {
+                    handleSettingsChange('secretMessage', e.target.value);
+                  }}
                   margin="normal"
                   multiline
                 />
@@ -699,10 +702,7 @@ const WorksheetGenerator = () => {
                   value={settings.prefilledWords.join(', ')}
                   onChange={(e) => {
                     const words = e.target.value.split(',').map(w => w.trim()).filter(w => w);
-                    setSettings(prev => ({
-                      ...prev,
-                      prefilledWords: words
-                    }));
+                    handleSettingsChange('prefilledWords', words);
                   }}
                   margin="normal"
                   helperText="Enter words to show as hints, separated by commas"
@@ -715,7 +715,7 @@ const WorksheetGenerator = () => {
                     <Switch
                       checked={settings.selectedOperations.addition}
                       onChange={(e) => {
-                        handleSettingsChange('selectedOperations.addition')(e);
+                        handleSettingsChange('selectedOperations.addition', e.target.checked);
                       }}
                     />
                   }
@@ -726,7 +726,7 @@ const WorksheetGenerator = () => {
                     <Switch
                       checked={settings.selectedOperations.subtraction}
                       onChange={(e) => {
-                        handleSettingsChange('selectedOperations.subtraction')(e);
+                        handleSettingsChange('selectedOperations.subtraction', e.target.checked);
                       }}
                     />
                   }
@@ -737,7 +737,7 @@ const WorksheetGenerator = () => {
                     <Switch
                       checked={settings.selectedOperations.multiplication}
                       onChange={(e) => {
-                        handleSettingsChange('selectedOperations.multiplication')(e);
+                        handleSettingsChange('selectedOperations.multiplication', e.target.checked);
                       }}
                     />
                   }
@@ -748,7 +748,7 @@ const WorksheetGenerator = () => {
                     <Switch
                       checked={settings.selectedOperations.division}
                       onChange={(e) => {
-                        handleSettingsChange('selectedOperations.division')(e);
+                        handleSettingsChange('selectedOperations.division', e.target.checked);
                       }}
                     />
                   }
