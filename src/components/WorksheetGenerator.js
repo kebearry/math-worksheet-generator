@@ -156,7 +156,6 @@ const WorksheetGenerator = () => {
   const initialState = {
     title: "Numbers Under 100",
     numberOfProblems: 10,
-    maxNumber: 100,
     difficulty: 'easy',
     selectedOperations: {
       addition: true,
@@ -190,7 +189,6 @@ const WorksheetGenerator = () => {
     setProblems(generateProblems());
   }, [
     settings.numberOfProblems, 
-    settings.maxNumber, 
     settings.secretMessage,
     settings.difficulty,
     settings.selectedOperations.addition,
@@ -675,16 +673,6 @@ const WorksheetGenerator = () => {
                     step: 1
                   }}
                   helperText="Minimum 10 problems required"
-                />
-                <TextField
-                  fullWidth
-                  label="Maximum Number"
-                  type="number"
-                  value={settings.maxNumber}
-                  onChange={(e) => {
-                    handleSettingsChange('maxNumber', parseInt(e.target.value) || 100);
-                  }}
-                  margin="normal"
                 />
                 <TextField
                   fullWidth
