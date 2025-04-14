@@ -128,10 +128,11 @@ const Worksheet = ({ settings, problems, theme = {
                       fontFamily: theme.font.message,
                       fontSize: '0.9rem',
                       color: theme.colors.secretMessage || theme.textColor,
-                      fontWeight: 'bold'
+                      fontWeight: 'bold',
+                      minHeight: '1.2em'
                     }}
                   >
-                    {letterToNumber[char] || '?'}
+                    {letterToNumber[char] || '\u2013'}
                   </Typography>
                 )}
               </Box>
@@ -143,35 +144,53 @@ const Worksheet = ({ settings, problems, theme = {
   };
 
   const renderNumberKey = () => {
-    const sortedEntries = Object.entries(letterToNumber)
-      .sort(([, a], [, b]) => a - b);
+    // Create a mapping of numbers to letters
+    const numberToLetter = {};
+    const messageLetters = new Set(settings.secretMessage.toUpperCase().split('').filter(char => char !== ' '));
+    
+    // First, add all letters that are in the secret message
+    problems.forEach(problem => {
+      if (problem.answer && problem.letter) {
+        numberToLetter[problem.answer] = problem.letter;
+      }
+    });
+
+    // Sort by number value
+    const sortedEntries = Object.entries(numberToLetter)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b));
 
     return (
       <Box sx={{ mt: 4, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ 
           color: theme.colors.numberKey || '#0000FF',
           fontFamily: theme.font.message,
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          mb: 2
         }}>
           Number Key:
         </Typography>
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'center', 
-          gap: 2, 
+          gap: 3, 
           flexWrap: 'wrap',
           mt: 1,
           color: theme.colors.numberKey || '#0000FF',
           fontFamily: theme.font.message,
           bgcolor: theme.colors.keyBg,
-          p: 1,
+          p: 2,
           borderRadius: '4px',
-          fontWeight: 'bold'
+          border: theme.borderStyle,
+          fontSize: '1.2rem'
         }}>
-          {sortedEntries.map(([letter, number], index) => (
+          {sortedEntries.map(([number, letter], index) => (
             <Typography key={index} sx={{ 
               fontWeight: 'bold',
-              textShadow: theme.colors.background === '#1E1E1E' ? '0px 0px 2px rgba(0,0,0,0.8)' : 'none'
+              textShadow: theme.colors.background === '#1E1E1E' ? '0px 0px 2px rgba(0,0,0,0.8)' : 'none',
+              backgroundColor: messageLetters.has(letter) ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              border: messageLetters.has(letter) ? '1px dashed currentColor' : 'none'
             }}>
               {number} = {letter}
             </Typography>
@@ -186,6 +205,35 @@ const Worksheet = ({ settings, problems, theme = {
       p: 3,
       bgcolor: theme.colors.background
     }}>
+      {settings.includeCodeBreaker && (
+        <Box 
+          sx={{ 
+            mb: 3,
+            p: 2,
+            border: '2px dashed #ff9800',
+            borderRadius: 1,
+            bgcolor: 'rgba(255, 152, 0, 0.1)',
+            textAlign: 'center'
+          }}
+        >
+          <Typography 
+            variant="subtitle1" 
+            color="warning.main" 
+            sx={{ 
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1
+            }}
+          >
+            <span role="img" aria-label="warning">⚠️</span>
+            TEACHER'S COPY - Answer Key Visible
+            <span role="img" aria-label="warning">⚠️</span>
+          </Typography>
+        </Box>
+      )}
+      
       <Box sx={{ textAlign: 'center', mb: 4 }}>
         <Typography variant="h4" sx={{
           fontFamily: theme.font.title,

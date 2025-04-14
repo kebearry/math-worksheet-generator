@@ -255,9 +255,6 @@ const WorksheetGenerator = () => {
     });
     
     // Second pass: assign numbers based on difficulty level
-    // For easy: start at 2, increment by 1 (to stay within 10)
-    // For medium: start at 5, increment by 3 (to stay within 20)
-    // For hard: start at 5, increment by 6 (to stay within 100)
     let currentNumber;
     let increment;
     
@@ -279,19 +276,17 @@ const WorksheetGenerator = () => {
         increment = 6;
     }
     
+    // Ensure every letter gets a number
     uniqueLetters.forEach(letter => {
-      // Ensure we don't exceed the maximum number for the difficulty level
-      if (currentNumber <= ranges.addition.max) {
-        letterToNumber[letter] = currentNumber;
-        currentNumber += increment;
-      } else {
-        // If we exceed the max, wrap back to a smaller number that hasn't been used
-        let num = 2;
-        while (Object.values(letterToNumber).includes(num) && num <= ranges.addition.max) {
-          num++;
-        }
-        if (num <= ranges.addition.max) {
-          letterToNumber[letter] = num;
+      letterToNumber[letter] = currentNumber;
+      currentNumber += increment;
+      
+      // If we exceed the max, wrap back to a smaller number
+      if (currentNumber > ranges.addition.max) {
+        currentNumber = 2;
+        // Skip numbers we've already used
+        while (Object.values(letterToNumber).includes(currentNumber)) {
+          currentNumber++;
         }
       }
     });
@@ -327,24 +322,23 @@ const WorksheetGenerator = () => {
     // Track which letters we've processed and which numbers we've used
     const processedLetters = new Set();
     const usedAnswers = new Set();
-    let operationIndex = 0;  // Track which operation to use next
+    let operationIndex = 0;
+
+    // Get all unique letters from the message
+    const uniqueMessageLetters = [...new Set(message.split('').filter(char => char !== ' '))];
     
-    // First, generate problems for each unique letter in the message
-    [...message].forEach(char => {
-      if (char === ' ' || processedLetters.has(char)) return;
+    // First, ensure we create problems for ALL letters in the secret message
+    uniqueMessageLetters.forEach(char => {
+      if (processedLetters.has(char)) return;
       
-      processedLetters.add(char);
       const targetAnswer = letterToNumber[char];
-      
       if (!targetAnswer) return;
       
-      usedAnswers.add(targetAnswer);
       let problemGenerated = false;
       
-      // Try each operation starting with the current index
+      // Try each operation until we successfully generate a problem
       for (let i = 0; i < availableOperations.length && !problemGenerated; i++) {
-        const currentIndex = (operationIndex + i) % availableOperations.length;
-        const operation = availableOperations[currentIndex];
+        const operation = availableOperations[(operationIndex + i) % availableOperations.length];
         
         switch (operation) {
           case '+': {
@@ -361,7 +355,9 @@ const WorksheetGenerator = () => {
                   letter: char
                 });
                 problemGenerated = true;
-                operationIndex = (currentIndex + 1) % availableOperations.length;
+                processedLetters.add(char);
+                usedAnswers.add(targetAnswer);
+                operationIndex = (operationIndex + 1) % availableOperations.length;
               }
             }
             break;
@@ -380,7 +376,9 @@ const WorksheetGenerator = () => {
                   letter: char
                 });
                 problemGenerated = true;
-                operationIndex = (currentIndex + 1) % availableOperations.length;
+                processedLetters.add(char);
+                usedAnswers.add(targetAnswer);
+                operationIndex = (operationIndex + 1) % availableOperations.length;
               }
             }
             break;
@@ -407,7 +405,9 @@ const WorksheetGenerator = () => {
                   letter: char
                 });
                 problemGenerated = true;
-                operationIndex = (currentIndex + 1) % availableOperations.length;
+                processedLetters.add(char);
+                usedAnswers.add(targetAnswer);
+                operationIndex = (operationIndex + 1) % availableOperations.length;
               }
             }
             break;
@@ -433,7 +433,9 @@ const WorksheetGenerator = () => {
                   letter: char
                 });
                 problemGenerated = true;
-                operationIndex = (currentIndex + 1) % availableOperations.length;
+                processedLetters.add(char);
+                usedAnswers.add(targetAnswer);
+                operationIndex = (operationIndex + 1) % availableOperations.length;
               }
             }
             break;
@@ -454,6 +456,8 @@ const WorksheetGenerator = () => {
             answer: targetAnswer,
             letter: char
           });
+          processedLetters.add(char);
+          usedAnswers.add(targetAnswer);
         }
       }
     });
@@ -522,54 +526,33 @@ const WorksheetGenerator = () => {
         }
 
         if (potentialProblem) {
-          newProblem = potentialProblem;
-          usedAnswers.add(newProblem.answer);
-        }
-      }
-
-      // If we couldn't find a unique answer, create a simple problem within range
-      if (!newProblem) {
-        switch (operation) {
-          case '×': {
-            const maxNum = ranges.multiplication.maxFirstNum;
-            const firstNum = Math.floor(Math.random() * maxNum) + 1;
-            const secondNum = Math.floor(Math.random() * maxNum) + 1;
-            newProblem = {
-              firstNum,
-              secondNum,
-              operation: '×',
-              answer: firstNum * secondNum
-            };
-            break;
-          }
-          case '÷': {
-            const divisor = Math.floor(Math.random() * (ranges.division.maxDivisor - 1)) + 2;
-            const quotient = Math.floor(Math.random() * (ranges.division.maxDivisor - 1)) + 2;
-            const dividend = divisor * quotient;
-            newProblem = {
-              firstNum: dividend,
-              secondNum: divisor,
-              operation: '÷',
-              answer: quotient
-            };
-            break;
-          }
-          default: {
-            const firstNum = Math.floor(Math.random() * (ranges.addition.maxFirstNum - 1)) + 1;
-            const maxSecond = ranges.addition.max - firstNum;
-            const secondNum = Math.floor(Math.random() * maxSecond) + 1;
-            newProblem = {
-              firstNum,
-              secondNum,
-              operation: '+',
-              answer: firstNum + secondNum
-            };
+          // Try to assign this answer to an unused letter from A-Z
+          const possibleLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+            .filter(l => !processedLetters.has(l));
+          
+          if (possibleLetters.length > 0) {
+            const randomLetter = possibleLetters[Math.floor(Math.random() * possibleLetters.length)];
+            potentialProblem.letter = randomLetter;
+            processedLetters.add(randomLetter);
+            newProblem = potentialProblem;
+            usedAnswers.add(newProblem.answer);
           }
         }
       }
 
-      problems.push(newProblem);
+      if (newProblem) {
+        problems.push(newProblem);
+      }
     }
+
+    // Sort problems to ensure message letters come first
+    problems.sort((a, b) => {
+      const aInMessage = uniqueMessageLetters.includes(a.letter);
+      const bInMessage = uniqueMessageLetters.includes(b.letter);
+      if (aInMessage && !bInMessage) return -1;
+      if (!aInMessage && bInMessage) return 1;
+      return 0;
+    });
 
     return problems;
   }
@@ -583,6 +566,41 @@ const WorksheetGenerator = () => {
               <Typography variant="h6" gutterBottom>
                 Worksheet Settings
               </Typography>
+              
+              {/* Teacher Mode Warning Section */}
+              <Box 
+                sx={{ 
+                  mb: 3, 
+                  p: 2, 
+                  border: '2px solid #ff9800',
+                  borderRadius: 1,
+                  bgcolor: 'rgba(255, 152, 0, 0.1)',
+                }}
+              >
+                <Typography variant="subtitle1" color="warning.main" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  👩‍🏫 Teacher Mode
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={settings.includeCodeBreaker}
+                      onChange={handleSettingsChange('includeCodeBreaker')}
+                      color="warning"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        Show Answer Key
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        ⚠️ This will reveal all answers and the secret message. Use only for checking or demonstration.
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Box>
+
               <Box sx={{ mb: 2 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Theme</InputLabel>
@@ -690,15 +708,6 @@ const WorksheetGenerator = () => {
                   }}
                   margin="normal"
                   helperText="Enter words to show as hints, separated by commas"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.includeCodeBreaker}
-                      onChange={handleSettingsChange('includeCodeBreaker')}
-                    />
-                  }
-                  label="Include Code Breaker"
                 />
                 <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
                   Operations
