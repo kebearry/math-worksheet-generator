@@ -202,6 +202,16 @@ const WorksheetGenerator = () => {
   const handleSettingsChange = (field) => (event) => {
     const newValue = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     
+    if (field === 'numberOfProblems') {
+      // Ensure number is at least 10
+      const numProblems = Math.max(10, parseInt(newValue) || 10);
+      setSettings(prev => ({
+        ...prev,
+        numberOfProblems: numProblems
+      }));
+      return;
+    }
+
     if (field.startsWith('selectedOperations.')) {
       const operation = field.split('.')[1];
       setSettings(prev => {
@@ -242,19 +252,13 @@ const WorksheetGenerator = () => {
   };
 
   function generateLetterToNumberMapping(message) {
-    // Remove spaces and get unique letters in order of appearance
-    const uniqueLetters = [];
     const letterToNumber = {};
     const ranges = DIFFICULTY_LEVELS[settings.difficulty].ranges;
     
-    // First pass: collect unique letters in order of appearance
-    message.toUpperCase().split('').forEach(char => {
-      if (char !== ' ' && !uniqueLetters.includes(char)) {
-        uniqueLetters.push(char);
-      }
-    });
+    // Get all unique letters from the message in order of appearance
+    const uniqueLetters = Array.from(new Set(message.toUpperCase().split('').filter(char => char !== ' ')));
     
-    // Second pass: assign numbers based on difficulty level
+    // Set up initial number and increment based on difficulty
     let currentNumber;
     let increment;
     
@@ -276,22 +280,19 @@ const WorksheetGenerator = () => {
         increment = 6;
     }
     
-    // Ensure every letter gets a number
-    uniqueLetters.forEach(letter => {
-      letterToNumber[letter] = currentNumber;
-      currentNumber += increment;
-      
-      // If we exceed the max, wrap back to a smaller number
-      if (currentNumber > ranges.addition.max) {
-        currentNumber = 2;
-        // Skip numbers we've already used
-        while (Object.values(letterToNumber).includes(currentNumber)) {
-          currentNumber++;
+    // First pass: assign numbers to all letters in the message
+    for (const letter of uniqueLetters) {
+      // If letter doesn't have a number yet, assign the next available number
+      if (!letterToNumber[letter]) {
+        // Make sure we don't exceed the maximum allowed number
+        while (currentNumber > ranges.addition.max) {
+          currentNumber = 2; // Reset to 2 if we exceed the max
         }
+        letterToNumber[letter] = currentNumber;
+        currentNumber += increment;
       }
-    });
+    }
 
-    console.log('Letter to Number Mapping:', letterToNumber);
     return letterToNumber;
   }
 
@@ -324,62 +325,55 @@ const WorksheetGenerator = () => {
     const usedAnswers = new Set();
     let operationIndex = 0;
 
-    // Get all unique letters from the message
-    const uniqueMessageLetters = [...new Set(message.split('').filter(char => char !== ' '))];
-    
-    // First, ensure we create problems for ALL letters in the secret message
-    uniqueMessageLetters.forEach(char => {
-      if (processedLetters.has(char)) return;
-      
-      const targetAnswer = letterToNumber[char];
-      if (!targetAnswer) return;
-      
+    // First, create problems for all letters in the secret message
+    const messageLetters = message.split('').filter(char => char !== ' ');
+    const uniqueMessageLetters = [...new Set(messageLetters)];
+
+    // Generate problems for each unique letter in the message
+    for (const letter of uniqueMessageLetters) {
+      const targetAnswer = letterToNumber[letter];
+      if (!targetAnswer) continue;
+
       let problemGenerated = false;
+      let originalOperationIndex = operationIndex;
       
       // Try each operation until we successfully generate a problem
-      for (let i = 0; i < availableOperations.length && !problemGenerated; i++) {
-        const operation = availableOperations[(operationIndex + i) % availableOperations.length];
+      do {
+        const operation = availableOperations[operationIndex];
+        operationIndex = (operationIndex + 1) % availableOperations.length;
         
         switch (operation) {
           case '+': {
-            if (targetAnswer <= ranges.addition.max) {
-              const maxFirstNum = Math.min(targetAnswer - 1, ranges.addition.maxFirstNum);
+            const maxFirstNum = Math.min(targetAnswer - 1, ranges.addition.maxFirstNum);
+            if (maxFirstNum > 0) {
               const firstNum = Math.floor(Math.random() * maxFirstNum) + 1;
               const secondNum = targetAnswer - firstNum;
-              if (secondNum <= ranges.addition.max) {
+              if (secondNum > 0 && secondNum <= ranges.addition.max) {
                 problems.push({ 
                   firstNum, 
                   secondNum, 
                   operation: '+', 
                   answer: targetAnswer,
-                  letter: char
+                  letter: letter
                 });
                 problemGenerated = true;
-                processedLetters.add(char);
-                usedAnswers.add(targetAnswer);
-                operationIndex = (operationIndex + 1) % availableOperations.length;
               }
             }
             break;
           }
           case '-': {
-            if (targetAnswer <= ranges.subtraction.max) {
-              const maxAdd = Math.min(2, ranges.subtraction.max - targetAnswer);
-              const firstNum = targetAnswer + Math.floor(Math.random() * maxAdd) + 1;
-              const secondNum = firstNum - targetAnswer;
-              if (firstNum <= ranges.subtraction.maxFirstNum) {
-                problems.push({ 
-                  firstNum, 
-                  secondNum, 
-                  operation: '-', 
-                  answer: targetAnswer,
-                  letter: char
-                });
-                problemGenerated = true;
-                processedLetters.add(char);
-                usedAnswers.add(targetAnswer);
-                operationIndex = (operationIndex + 1) % availableOperations.length;
-              }
+            const maxAdd = Math.min(5, ranges.subtraction.max - targetAnswer);
+            const firstNum = targetAnswer + Math.floor(Math.random() * maxAdd) + 1;
+            const secondNum = firstNum - targetAnswer;
+            if (firstNum <= ranges.subtraction.maxFirstNum && secondNum > 0) {
+              problems.push({ 
+                firstNum, 
+                secondNum, 
+                operation: '-', 
+                answer: targetAnswer,
+                letter: letter
+              });
+              problemGenerated = true;
             }
             break;
           }
@@ -402,12 +396,9 @@ const WorksheetGenerator = () => {
                   secondNum, 
                   operation: '×', 
                   answer: targetAnswer,
-                  letter: char
+                  letter: letter
                 });
                 problemGenerated = true;
-                processedLetters.add(char);
-                usedAnswers.add(targetAnswer);
-                operationIndex = (operationIndex + 1) % availableOperations.length;
               }
             }
             break;
@@ -430,39 +421,42 @@ const WorksheetGenerator = () => {
                   secondNum: divisor, 
                   operation: '÷', 
                   answer: targetAnswer,
-                  letter: char
+                  letter: letter
                 });
                 problemGenerated = true;
-                processedLetters.add(char);
-                usedAnswers.add(targetAnswer);
-                operationIndex = (operationIndex + 1) % availableOperations.length;
               }
             }
             break;
           }
         }
-      }
-      
-      // If no operation worked, use addition as fallback
+      } while (!problemGenerated && operationIndex !== originalOperationIndex);
+
+      // If no operation worked, force an addition problem
       if (!problemGenerated) {
         const maxFirstNum = Math.min(targetAnswer - 1, ranges.addition.maxFirstNum);
-        const firstNum = Math.floor(Math.random() * maxFirstNum) + 1;
-        const secondNum = targetAnswer - firstNum;
-        if (secondNum <= ranges.addition.max) {
-          problems.push({ 
-            firstNum,
-            secondNum,
-            operation: '+',
-            answer: targetAnswer,
-            letter: char
-          });
-          processedLetters.add(char);
-          usedAnswers.add(targetAnswer);
+        if (maxFirstNum > 0) {
+          const firstNum = Math.floor(Math.random() * maxFirstNum) + 1;
+          const secondNum = targetAnswer - firstNum;
+          if (secondNum > 0) {
+            problems.push({ 
+              firstNum,
+              secondNum,
+              operation: '+',
+              answer: targetAnswer,
+              letter: letter
+            });
+            problemGenerated = true;
+          }
         }
       }
-    });
 
-    // Fill remaining problems with random ones that don't duplicate any letter answers
+      if (problemGenerated) {
+        processedLetters.add(letter);
+        usedAnswers.add(targetAnswer);
+      }
+    }
+
+    // Fill remaining problems up to exactly numberOfProblems
     while (problems.length < settings.numberOfProblems) {
       const operation = availableOperations[operationIndex];
       operationIndex = (operationIndex + 1) % availableOperations.length;
@@ -471,7 +465,7 @@ const WorksheetGenerator = () => {
       let attempts = 0;
       const maxAttempts = 100;
 
-      while (!newProblem && attempts < maxAttempts) {
+      while (!newProblem && attempts < maxAttempts && problems.length < settings.numberOfProblems) {
         attempts++;
         let potentialProblem = null;
 
@@ -543,18 +537,17 @@ const WorksheetGenerator = () => {
       if (newProblem) {
         problems.push(newProblem);
       }
+
+      if (problems.length >= settings.numberOfProblems) break;
     }
 
-    // Sort problems to ensure message letters come first
-    problems.sort((a, b) => {
-      const aInMessage = uniqueMessageLetters.includes(a.letter);
-      const bInMessage = uniqueMessageLetters.includes(b.letter);
-      if (aInMessage && !bInMessage) return -1;
-      if (!aInMessage && bInMessage) return 1;
-      return 0;
-    });
+    // Add the complete letter mapping to the problems array
+    Object.assign(problems, { letterToNumber });
 
-    return problems;
+    // Ensure we don't exceed the requested number of problems
+    const finalProblems = problems.slice(0, settings.numberOfProblems);
+    finalProblems.letterToNumber = letterToNumber;
+    return finalProblems;
   }
 
   return (
@@ -678,6 +671,11 @@ const WorksheetGenerator = () => {
                   value={settings.numberOfProblems}
                   onChange={handleSettingsChange('numberOfProblems')}
                   margin="normal"
+                  inputProps={{ 
+                    min: 10,
+                    step: 1
+                  }}
+                  helperText="Minimum 10 problems required"
                 />
                 <TextField
                   fullWidth

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Grid, Paper } from '@mui/material';
+import { Box, Typography, Grid} from '@mui/material';
 
 const Worksheet = ({ settings, problems, theme = {
   colors: {
@@ -16,13 +16,8 @@ const Worksheet = ({ settings, problems, theme = {
     message: "'Courier New', monospace"
   }
 } }) => {
-  // Create a mapping of letters to their corresponding numbers
-  const letterToNumber = {};
-  problems.forEach(problem => {
-    if (problem.answer && problem.letter) {
-      letterToNumber[problem.letter] = problem.answer;
-    }
-  });
+  // Use the letterToNumber mapping directly from problems
+  const letterToNumber = problems.letterToNumber || {};
 
   const renderProblem = (problem, index) => (
     <Box 
@@ -148,11 +143,9 @@ const Worksheet = ({ settings, problems, theme = {
     const numberToLetter = {};
     const messageLetters = new Set(settings.secretMessage.toUpperCase().split('').filter(char => char !== ' '));
     
-    // First, add all letters that are in the secret message
-    problems.forEach(problem => {
-      if (problem.answer && problem.letter) {
-        numberToLetter[problem.answer] = problem.letter;
-      }
+    // Use the letterToNumber mapping to create the number key
+    Object.entries(letterToNumber).forEach(([letter, number]) => {
+      numberToLetter[number] = letter;
     });
 
     // Sort by number value
