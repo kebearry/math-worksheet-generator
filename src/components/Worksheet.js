@@ -148,9 +148,12 @@ const Worksheet = ({ settings, problems, theme = {
       numberToLetter[number] = letter;
     });
 
-    // Sort by number value
-    const sortedEntries = Object.entries(numberToLetter)
-      .sort(([a], [b]) => parseInt(a) - parseInt(b));
+    // Get entries and shuffle them
+    let entries = Object.entries(numberToLetter);
+    for (let i = entries.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [entries[i], entries[j]] = [entries[j], entries[i]];
+    }
 
     return (
       <Box sx={{ mt: 4, textAlign: 'center' }}>
@@ -176,7 +179,7 @@ const Worksheet = ({ settings, problems, theme = {
           border: theme.borderStyle,
           fontSize: '1.2rem'
         }}>
-          {sortedEntries.map(([number, letter], index) => (
+          {entries.map(([number, letter], index) => (
             <Typography key={index} sx={{ 
               fontWeight: 'bold',
               textShadow: theme.colors.background === '#1E1E1E' ? '0px 0px 2px rgba(0,0,0,0.8)' : 'none',
