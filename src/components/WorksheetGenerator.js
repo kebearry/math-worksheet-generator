@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Container, 
@@ -18,7 +18,6 @@ import {
   List,
   ListItem,
   ListItemButton,
-  ListItemText,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -298,118 +297,8 @@ const WorksheetGenerator = () => {
     setDeleteDialogOpen(true);
   };
 
-  // Initialize problems after first render
-  useEffect(() => {
-    setProblems(generateProblems());
-  }, []);
-
-  // Update problems whenever relevant settings change
-  useEffect(() => {
-    console.log('Settings changed:', settings);
-    setProblems(generateProblems());
-  }, [
-    settings.numberOfProblems, 
-    settings.secretMessage,
-    settings.difficulty,
-    settings.selectedOperations.addition,
-    settings.selectedOperations.subtraction,
-    settings.selectedOperations.multiplication,
-    settings.selectedOperations.division
-  ]);
-
-  const handleSettingsChange = (field, value) => {
-    if (field === 'difficulty') {
-      // When changing difficulty, preserve ALL current operation settings
-      setSettings(prev => ({
-        ...prev,
-        difficulty: value
-      }));
-    } else if (field.startsWith('selectedOperations.')) {
-      const operation = field.split('.')[1];
-      setSettings(prev => {
-        const newSettings = {
-          ...prev,
-          selectedOperations: {
-            ...prev.selectedOperations,
-            [operation]: value
-          }
-        };
-        
-        // Check if at least one operation is selected
-        const hasSelectedOperation = Object.values(newSettings.selectedOperations).some(val => val);
-        
-        // If no operations are selected, keep the current operation enabled
-        if (!hasSelectedOperation) {
-          newSettings.selectedOperations[operation] = true;
-        }
-        
-        return newSettings;
-      });
-    } else if (field === 'numberOfProblems') {
-      // Ensure the number is at least 10
-      const newValue = Math.max(10, value);
-      setSettings(prev => ({
-        ...prev,
-        [field]: newValue
-      }));
-    } else {
-      setSettings(prev => ({
-        ...prev,
-        [field]: value
-      }));
-    }
-  };
-
-  const handleRegenerateProblems = () => {
-    setProblems(generateProblems());
-  };
-
-  function generateLetterToNumberMapping(message) {
-    const letterToNumber = {};
-    const ranges = DIFFICULTY_LEVELS[settings.difficulty].ranges;
-    
-    // Get all unique letters from the message in order of appearance
-    const uniqueLetters = Array.from(new Set(message.toUpperCase().split('').filter(char => char !== ' ')));
-    
-    // Set up initial number and increment based on difficulty
-    let currentNumber;
-    let increment;
-    
-    switch(settings.difficulty) {
-      case 'easy':
-        currentNumber = 2;
-        increment = 1;
-        break;
-      case 'medium':
-        currentNumber = 5;
-        increment = 3;
-        break;
-      case 'hard':
-        currentNumber = 5;
-        increment = 6;
-        break;
-      default:
-        currentNumber = 5;
-        increment = 6;
-    }
-    
-    // First pass: assign numbers to all letters in the message
-    for (const letter of uniqueLetters) {
-      // If letter doesn't have a number yet, assign the next available number
-      if (!letterToNumber[letter]) {
-        // Make sure we don't exceed the maximum allowed number
-        while (currentNumber > ranges.addition.max) {
-          currentNumber = 2; // Reset to 2 if we exceed the max
-        }
-        letterToNumber[letter] = currentNumber;
-        currentNumber += increment;
-      }
-    }
-
-    return letterToNumber;
-  }
-
-  function generateProblems() {
+  // Memoize the generateProblems function to avoid infinite loops
+  const generateProblems = useCallback(() => {
     const message = settings.secretMessage.toUpperCase();
     const letterToNumber = generateLetterToNumberMapping(message);
     const problems = [];
@@ -691,6 +580,109 @@ const WorksheetGenerator = () => {
     const finalProblems = problems.slice(0, settings.numberOfProblems);
     finalProblems.letterToNumber = letterToNumber;
     return finalProblems;
+  }, [settings]); // Add settings as dependency
+
+  // Initialize problems after first render
+  useEffect(() => {
+    setProblems(generateProblems());
+  }, [generateProblems]); // Add generateProblems as dependency
+
+  // Update problems whenever relevant settings change
+  useEffect(() => {
+    console.log('Settings changed:', settings);
+    setProblems(generateProblems());
+  }, [generateProblems]); // Only depend on generateProblems which includes settings
+
+  const handleSettingsChange = (field, value) => {
+    if (field === 'difficulty') {
+      // When changing difficulty, preserve ALL current operation settings
+      setSettings(prev => ({
+        ...prev,
+        difficulty: value
+      }));
+    } else if (field.startsWith('selectedOperations.')) {
+      const operation = field.split('.')[1];
+      setSettings(prev => {
+        const newSettings = {
+          ...prev,
+          selectedOperations: {
+            ...prev.selectedOperations,
+            [operation]: value
+          }
+        };
+        
+        // Check if at least one operation is selected
+        const hasSelectedOperation = Object.values(newSettings.selectedOperations).some(val => val);
+        
+        // If no operations are selected, keep the current operation enabled
+        if (!hasSelectedOperation) {
+          newSettings.selectedOperations[operation] = true;
+        }
+        
+        return newSettings;
+      });
+    } else if (field === 'numberOfProblems') {
+      // Ensure the number is at least 10
+      const newValue = Math.max(10, value);
+      setSettings(prev => ({
+        ...prev,
+        [field]: newValue
+      }));
+    } else {
+      setSettings(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
+  const handleRegenerateProblems = () => {
+    setProblems(generateProblems());
+  };
+
+  function generateLetterToNumberMapping(message) {
+    const letterToNumber = {};
+    const ranges = DIFFICULTY_LEVELS[settings.difficulty].ranges;
+    
+    // Get all unique letters from the message in order of appearance
+    const uniqueLetters = Array.from(new Set(message.toUpperCase().split('').filter(char => char !== ' ')));
+    
+    // Set up initial number and increment based on difficulty
+    let currentNumber;
+    let increment;
+    
+    switch(settings.difficulty) {
+      case 'easy':
+        currentNumber = 2;
+        increment = 1;
+        break;
+      case 'medium':
+        currentNumber = 5;
+        increment = 3;
+        break;
+      case 'hard':
+        currentNumber = 5;
+        increment = 6;
+        break;
+      default:
+        currentNumber = 5;
+        increment = 6;
+    }
+    
+    // First pass: assign numbers to all letters in the message
+    for (const letter of uniqueLetters) {
+      // If letter doesn't have a number yet, assign the next available number
+      if (!letterToNumber[letter]) {
+        // Make sure we don't exceed the maximum allowed number
+        while (currentNumber > ranges.addition.max) {
+          currentNumber = 2; // Reset to 2 if we exceed the max
+        }
+        letterToNumber[letter] = currentNumber;
+        currentNumber += increment;
+      }
+    }
+
+    return letterToNumber;
   }
 
   return (
