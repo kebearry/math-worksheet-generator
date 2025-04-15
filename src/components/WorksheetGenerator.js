@@ -12,10 +12,23 @@ import {
   Select,
   MenuItem,
   InputLabel,
-  FormControl
+  FormControl,
+  Alert,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import Worksheet from './Worksheet';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
 
 const THEMES = {
   default: {
@@ -164,19 +177,126 @@ const WorksheetGenerator = () => {
       division: false
     },
     secretMessage: "SUPERHEROES SAVE THE DAY",
-    includeCodeBreaker: true,
+    includeCodeBreaker: false,
     prefilledWords: ['THE', 'SAVE'],
     theme: 'default'
   };
 
   const [settings, setSettings] = useState(initialState);
   const [problems, setProblems] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [templateName, setTemplateName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
 
   const worksheetRef = useRef();
 
   const handlePrint = useReactToPrint({
     content: () => worksheetRef.current,
   });
+
+  // Fetch templates on component mount
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/templates`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch templates');
+      }
+      const data = await response.json();
+      setTemplates(data || []); // Ensure we always set an array, even if empty
+    } catch (err) {
+      console.warn('Could not fetch templates:', err);
+      setTemplates([]); // Set empty array instead of showing error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveTemplate = async () => {
+    try {
+      if (!templateName.trim()) {
+        setError('Please enter a template name');
+        return;
+      }
+
+      setIsLoading(true);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/templates`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: templateName,
+          settings: settings,
+          isPublic: false,
+          createdBy: 'anonymous'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save template');
+      }
+      
+      fetchTemplates(); // Refresh templates list
+      setTemplateName(''); // Clear the input field after successful save
+      setError(null); // Clear any existing errors
+    } catch (err) {
+      setError(err.message || 'Failed to save template');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadTemplate = async (templateId) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/templates/${templateId}`);
+      const template = await response.json();
+      
+      setSettings(template.settings);
+      generateProblems();
+    } catch (err) {
+      setError('Failed to load template');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteTemplate = async (templateId) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/templates/${templateId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete template');
+      
+      fetchTemplates(); // Refresh templates list
+      setDeleteDialogOpen(false);
+      setTemplateToDelete(null);
+    } catch (err) {
+      setError('Failed to delete template');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (template, event) => {
+    event.stopPropagation();
+    setTemplateToDelete(template);
+    setDeleteDialogOpen(true);
+  };
 
   // Initialize problems after first render
   useEffect(() => {
@@ -225,6 +345,13 @@ const WorksheetGenerator = () => {
         
         return newSettings;
       });
+    } else if (field === 'numberOfProblems') {
+      // Ensure the number is at least 10
+      const newValue = Math.max(10, value);
+      setSettings(prev => ({
+        ...prev,
+        [field]: newValue
+      }));
     } else {
       setSettings(prev => ({
         ...prev,
@@ -442,81 +569,113 @@ const WorksheetGenerator = () => {
     }
 
     // Fill remaining problems up to exactly numberOfProblems
-    while (problems.length < settings.numberOfProblems) {
+    let remainingAttempts = 100; // Limit attempts to prevent infinite loops
+    while (problems.length < settings.numberOfProblems && remainingAttempts > 0) {
       const operation = availableOperations[operationIndex];
       operationIndex = (operationIndex + 1) % availableOperations.length;
       
       let newProblem = null;
       let attempts = 0;
-      const maxAttempts = 100;
+      const maxAttempts = 20;
 
-      while (!newProblem && attempts < maxAttempts && problems.length < settings.numberOfProblems) {
+      while (!newProblem && attempts < maxAttempts) {
         attempts++;
         let potentialProblem = null;
 
+        // Generate a random number that hasn't been used yet
+        const getUnusedAnswer = (max) => {
+          // Allow reusing answers if we've used all available numbers
+          const availableNumbers = [];
+          for (let i = 1; i <= max; i++) {
+            if (!usedAnswers.has(i) || problems.length >= uniqueMessageLetters.length) {
+              availableNumbers.push(i);
+            }
+          }
+          return availableNumbers.length > 0 
+            ? availableNumbers[Math.floor(Math.random() * availableNumbers.length)]
+            : null;
+        };
+
         switch (operation) {
           case '+': {
-            const firstNum = Math.floor(Math.random() * ranges.addition.maxFirstNum) + 1;
-            const maxSecond = Math.min(ranges.addition.max - firstNum, ranges.addition.max);
-            const secondNum = Math.floor(Math.random() * maxSecond) + 1;
-            const answer = firstNum + secondNum;
-            if (!usedAnswers.has(answer) && answer <= ranges.addition.max) {
-              potentialProblem = { firstNum, secondNum, operation, answer };
+            const answer = getUnusedAnswer(ranges.addition.max);
+            if (answer) {
+              const maxFirstNum = Math.min(answer - 1, ranges.addition.maxFirstNum);
+              if (maxFirstNum > 0) {
+                const firstNum = Math.floor(Math.random() * maxFirstNum) + 1;
+                const secondNum = answer - firstNum;
+                if (secondNum > 0) {
+                  potentialProblem = { firstNum, secondNum, operation, answer };
+                }
+              }
             }
             break;
           }
           case '-': {
-            const maxFirstNum = ranges.subtraction.maxFirstNum;
-            const firstNum = Math.floor(Math.random() * maxFirstNum) + 1;
-            const maxSecond = Math.min(firstNum - 1, ranges.subtraction.max);
-            const secondNum = Math.floor(Math.random() * maxSecond) + 1;
-            const answer = firstNum - secondNum;
-            if (!usedAnswers.has(answer) && answer <= ranges.subtraction.max) {
-              potentialProblem = { firstNum, secondNum, operation, answer };
+            const answer = getUnusedAnswer(ranges.subtraction.max);
+            if (answer) {
+              const maxAdd = Math.min(5, ranges.subtraction.max - answer);
+              const firstNum = answer + Math.floor(Math.random() * maxAdd) + 1;
+              const secondNum = firstNum - answer;
+              if (firstNum <= ranges.subtraction.maxFirstNum && secondNum > 0) {
+                potentialProblem = { firstNum, secondNum, operation, answer };
+              }
             }
             break;
           }
           case '×': {
-            // Generate random multiplication problem within range
-            const maxNum = ranges.multiplication.maxFirstNum;
-            const firstNum = Math.floor(Math.random() * maxNum) + 1;
-            const secondNum = Math.floor(Math.random() * maxNum) + 1;
-            const answer = firstNum * secondNum;
-            if (answer <= ranges.multiplication.max && !usedAnswers.has(answer)) {
-              potentialProblem = { firstNum, secondNum, operation, answer };
+            const answer = getUnusedAnswer(ranges.multiplication.max);
+            if (answer) {
+              const factors = [];
+              for (let i = 1; i <= Math.sqrt(answer); i++) {
+                if (answer % i === 0) {
+                  const j = answer / i;
+                  if (i <= ranges.multiplication.maxFirstNum && j <= ranges.multiplication.maxFirstNum) {
+                    factors.push([i, j]);
+                  }
+                }
+              }
+              if (factors.length > 0) {
+                const [firstNum, secondNum] = factors[Math.floor(Math.random() * factors.length)];
+                potentialProblem = { firstNum, secondNum, operation, answer };
+              }
             }
             break;
           }
           case '÷': {
-            // Generate random division problem within range
-            const maxDivisor = ranges.division.maxDivisor;
-            const divisor = Math.floor(Math.random() * (maxDivisor - 1)) + 2;
-            const maxQuotient = Math.floor(ranges.division.max / divisor);
-            const quotient = Math.floor(Math.random() * maxQuotient) + 1;
-            const dividend = divisor * quotient;
-            if (dividend <= ranges.division.max && !usedAnswers.has(quotient)) {
-              potentialProblem = { 
-                firstNum: dividend, 
-                secondNum: divisor, 
-                operation: '÷', 
-                answer: quotient 
-              };
+            const answer = getUnusedAnswer(ranges.division.maxDivisor);
+            if (answer) {
+              const possibleDivisors = [];
+              for (let i = 2; i <= ranges.division.maxDivisor; i++) {
+                const dividend = answer * i;
+                if (dividend <= ranges.division.max) {
+                  possibleDivisors.push(i);
+                }
+              }
+              if (possibleDivisors.length > 0) {
+                const divisor = possibleDivisors[Math.floor(Math.random() * possibleDivisors.length)];
+                const dividend = answer * divisor;
+                potentialProblem = { firstNum: dividend, secondNum: divisor, operation, answer };
+              }
             }
             break;
           }
         }
 
         if (potentialProblem) {
-          // Try to assign this answer to an unused letter from A-Z
-          const possibleLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-            .filter(l => !processedLetters.has(l));
+          // Allow reusing letters if we need more problems
+          const availableLetters = problems.length >= uniqueMessageLetters.length
+            ? 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+            : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => !processedLetters.has(l));
           
-          if (possibleLetters.length > 0) {
-            const randomLetter = possibleLetters[Math.floor(Math.random() * possibleLetters.length)];
+          if (availableLetters.length > 0) {
+            const randomLetter = availableLetters[Math.floor(Math.random() * availableLetters.length)];
             potentialProblem.letter = randomLetter;
             processedLetters.add(randomLetter);
             newProblem = potentialProblem;
-            usedAnswers.add(newProblem.answer);
+            if (problems.length < uniqueMessageLetters.length) {
+              usedAnswers.add(newProblem.answer);
+            }
           }
         }
       }
@@ -524,12 +683,9 @@ const WorksheetGenerator = () => {
       if (newProblem) {
         problems.push(newProblem);
       }
-
-      if (problems.length >= settings.numberOfProblems) break;
+      
+      remainingAttempts--;
     }
-
-    // Add the complete letter mapping to the problems array
-    Object.assign(problems, { letterToNumber });
 
     // Ensure we don't exceed the requested number of problems
     const finalProblems = problems.slice(0, settings.numberOfProblems);
@@ -547,7 +703,222 @@ const WorksheetGenerator = () => {
                 Worksheet Settings
               </Typography>
               
-              {/* Teacher Mode Warning Section */}
+              {/* Template Management Section */}
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  mb: 3, 
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span role="img" aria-label="save">💾</span> Save Current Settings
+                  </Typography>
+                </Box>
+
+                {error && (
+                  <Alert 
+                    severity="error" 
+                    sx={{ mb: 2 }}
+                    action={
+                      <IconButton
+                        size="small"
+                        onClick={() => setError(null)}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    }
+                  >
+                    {error}
+                  </Alert>
+                )}
+
+                <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+                  <TextField
+                    size="small"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="Enter template name"
+                    sx={{ flex: 1 }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={saveTemplate}
+                    disabled={!templateName.trim() || isLoading}
+                    size="small"
+                    startIcon={isLoading ? <CircularProgress size={20} /> : null}
+                  >
+                    Save
+                  </Button>
+                </Box>
+
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <span role="img" aria-label="templates">📚</span> Saved Templates
+                </Typography>
+
+                {isLoading && !templates.length ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : templates.length > 0 ? (
+                  <List sx={{ 
+                    maxHeight: '300px', 
+                    overflow: 'auto',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    bgcolor: 'background.paper'
+                  }}>
+                    {templates.map((template) => (
+                      <ListItem
+                        key={template._id}
+                        disablePadding
+                        secondaryAction={
+                          <IconButton
+                            edge="end"
+                            onClick={(e) => handleDeleteClick(template, e)}
+                            title="Delete template"
+                            size="small"
+                            sx={{ mr: 1 }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        }
+                        sx={{
+                          borderBottom: '1px solid',
+                          borderColor: 'divider',
+                          '&:last-child': {
+                            borderBottom: 'none'
+                          }
+                        }}
+                      >
+                        <ListItemButton 
+                          onClick={() => loadTemplate(template._id)}
+                          sx={{ 
+                            py: 1.5,
+                            '&:hover': {
+                              bgcolor: 'action.hover',
+                              '& .apply-settings-text': {
+                                opacity: 1,
+                                transform: 'translateX(0)',
+                              }
+                            },
+                            position: 'relative',
+                            pl: 2
+                          }}
+                        >
+                          <Box sx={{ width: '100%' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 500, flex: 1 }}>
+                                {template.name}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                className="apply-settings-text"
+                                sx={{ 
+                                  color: 'primary.main',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  opacity: 0,
+                                  transform: 'translateX(-8px)',
+                                  transition: 'all 0.2s ease-in-out',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 400
+                                }}
+                              >
+                                Apply settings
+                              </Typography>
+                            </Box>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              gap: 1,
+                              flexWrap: 'wrap'
+                            }}>
+                              <Typography 
+                                component="span" 
+                                variant="caption" 
+                                sx={{ 
+                                  color: 'text.secondary',
+                                  bgcolor: 'action.hover',
+                                  px: 1,
+                                  py: 0.25,
+                                  borderRadius: 1
+                                }}
+                              >
+                                {template.settings.difficulty.charAt(0).toUpperCase() + template.settings.difficulty.slice(1)}
+                              </Typography>
+                              {Object.entries(template.settings.selectedOperations)
+                                .filter(([_, enabled]) => enabled)
+                                .map(([op]) => (
+                                  <Typography
+                                    key={op}
+                                    component="span"
+                                    variant="caption"
+                                    sx={{ 
+                                      color: 'text.secondary',
+                                      bgcolor: 'action.hover',
+                                      px: 1,
+                                      py: 0.25,
+                                      borderRadius: 1
+                                    }}
+                                  >
+                                    {op.charAt(0).toUpperCase() + op.slice(1)}
+                                  </Typography>
+                                ))}
+                            </Box>
+                          </Box>
+                        </ListItemButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Box 
+                    sx={{ 
+                      p: 3, 
+                      textAlign: 'center',
+                      border: '1px dashed',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      bgcolor: 'background.paper'
+                    }}
+                  >
+                    <Typography color="text.secondary" variant="body2">
+                      No templates saved yet
+                    </Typography>
+                    <Typography color="text.secondary" variant="caption" display="block">
+                      Save your current settings as a template to reuse them later
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+
+              {/* Reset Settings Button */}
+              <Button 
+                variant="outlined" 
+                color="secondary"
+                fullWidth 
+                onClick={() => setSettings(initialState)}
+                sx={{ 
+                  mb: 3,
+                  py: 1,
+                  borderWidth: 2,
+                  bgcolor: 'rgba(245, 0, 87, 0.05)',
+                  '&:hover': {
+                    bgcolor: 'rgba(245, 0, 87, 0.1)',
+                    borderWidth: 2
+                  }
+                }}
+              >
+                <span style={{ fontSize: '1.2em', marginRight: '8px' }}>↺</span>
+                Reset All Settings
+              </Button>
+
+              {/* Teacher Mode Section */}
               <Box 
                 sx={{ 
                   mb: 3, 
@@ -776,6 +1147,54 @@ const WorksheetGenerator = () => {
           </Grid>
         </Grid>
       </Box>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setTemplateToDelete(null);
+        }}
+        PaperProps={{
+          sx: {
+            width: '100%',
+            maxWidth: 400,
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          Delete Template?
+        </DialogTitle>
+        <DialogContent sx={{ pb: 2 }}>
+          <Typography>
+            Are you sure you want to delete "{templateToDelete?.name}"? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => {
+              setDeleteDialogOpen(false);
+              setTemplateToDelete(null);
+            }}
+            color="inherit"
+            variant="outlined"
+            size="small"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => deleteTemplate(templateToDelete?._id)}
+            color="error"
+            variant="contained"
+            size="small"
+            disabled={isLoading}
+            startIcon={isLoading ? <CircularProgress size={16} /> : null}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
