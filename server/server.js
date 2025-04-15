@@ -10,7 +10,12 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://custom-math-worksheet-generator.vercel.app'
+    : 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 
 // Connect to MongoDB Atlas with detailed error logging
