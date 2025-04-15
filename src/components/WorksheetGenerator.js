@@ -928,10 +928,27 @@ const WorksheetGenerator = () => {
                   bgcolor: 'rgba(255, 152, 0, 0.1)',
                 }}
               >
-                <Typography variant="subtitle1" color="warning.main" sx={{ fontWeight: 'bold', mb: 1 }}>
+                <Typography 
+                  variant="subtitle1" 
+                  color="warning.main" 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    mb: 1,
+                    fontSize: { xs: '0.875rem', sm: '1rem' }
+                  }}
+                >
                   👩‍🏫 Teacher Mode
                 </Typography>
                 <FormControlLabel
+                  sx={{
+                    display: 'flex',
+                    margin: 0,
+                    alignItems: 'flex-start',
+                    '& .MuiFormControlLabel-label': {
+                      flex: 1,
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
                   control={
                     <Switch
                       checked={settings.includeCodeBreaker}
@@ -939,14 +956,29 @@ const WorksheetGenerator = () => {
                         handleSettingsChange('includeCodeBreaker', e.target.checked);
                       }}
                       color="warning"
+                      sx={{ mt: 0.5 }}
                     />
                   }
                   label={
-                    <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                    <Box sx={{ ml: 1 }}>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontWeight: 'bold',
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }}
+                      >
                         Show Answer Key
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        sx={{
+                          display: 'block',
+                          mt: 0.5,
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                        }}
+                      >
                         ⚠️ This will reveal all answers and the secret message. Use only for checking or demonstration.
                       </Typography>
                     </Box>

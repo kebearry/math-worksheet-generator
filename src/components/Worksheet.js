@@ -28,28 +28,62 @@ const Worksheet = ({ settings, problems, theme = {
         p: 2,
         mb: 2,
         width: '100%',
-        bgcolor: theme.colors.problemBg
+        bgcolor: theme.colors.problemBg,
+        position: 'relative'
       }}
     >
-      <Typography variant="h6" sx={{ 
-        fontFamily: theme.font.problems,
-        color: theme.textColor
+      {settings.includeCodeBreaker && (
+        <Typography 
+          component="span" 
+          sx={{ 
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: 'primary.main',
+            fontSize: '0.8em',
+            fontFamily: theme.font.problems,
+            fontWeight: 'normal',
+            bgcolor: 'rgba(25, 118, 210, 0.08)',
+            px: 1,
+            py: 0.25,
+            borderRadius: 1,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            zIndex: 1
+          }}
+        >
+          <span role="img" aria-label="key" style={{ fontSize: '0.9em' }}>🔑</span>
+          {problem.answer}
+        </Typography>
+      )}
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+        pt: settings.includeCodeBreaker ? 3 : 0
       }}>
-        {problem.firstNum} {problem.operation} {problem.secondNum} = _____
-        {settings.includeCodeBreaker && (
-          <Typography 
-            component="span" 
-            sx={{ 
-              ml: 2,
-              color: 'blue',
-              fontSize: '0.8em',
-              fontFamily: theme.font.problems
-            }}
-          >
-            Answer: {problem.answer}
-          </Typography>
-        )}
-      </Typography>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            fontFamily: theme.font.problems,
+            color: theme.textColor,
+            fontSize: '1.2em',
+            mb: 2,
+            textAlign: 'center'
+          }}
+        >
+          {problem.firstNum} {problem.operation} {problem.secondNum} =
+        </Typography>
+        <Box 
+          sx={{ 
+            width: '60%',
+            height: '2px',
+            bgcolor: theme.textColor
+          }} 
+        />
+      </Box>
     </Box>
   );
 
