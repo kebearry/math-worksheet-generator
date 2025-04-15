@@ -189,6 +189,7 @@ const WorksheetGenerator = () => {
   const [error, setError] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
+  const prevSettings = useRef(initialState);
 
   const worksheetRef = useRef();
 
@@ -296,6 +297,52 @@ const WorksheetGenerator = () => {
     setTemplateToDelete(template);
     setDeleteDialogOpen(true);
   };
+
+  // Memoize the generateLetterToNumberMapping function
+  const generateLetterToNumberMapping = useCallback((message) => {
+    const letterToNumber = {};
+    const ranges = DIFFICULTY_LEVELS[settings.difficulty].ranges;
+    
+    // Get all unique letters from the message in order of appearance
+    const uniqueLetters = Array.from(new Set(message.toUpperCase().split('').filter(char => char !== ' ')));
+    
+    // Set up initial number and increment based on difficulty
+    let currentNumber;
+    let increment;
+    
+    switch(settings.difficulty) {
+      case 'easy':
+        currentNumber = 2;
+        increment = 1;
+        break;
+      case 'medium':
+        currentNumber = 5;
+        increment = 3;
+        break;
+      case 'hard':
+        currentNumber = 5;
+        increment = 6;
+        break;
+      default:
+        currentNumber = 5;
+        increment = 6;
+    }
+    
+    // First pass: assign numbers to all letters in the message
+    for (const letter of uniqueLetters) {
+      // If letter doesn't have a number yet, assign the next available number
+      if (!letterToNumber[letter]) {
+        // Make sure we don't exceed the maximum allowed number
+        while (currentNumber > ranges.addition.max) {
+          currentNumber = 2; // Reset to 2 if we exceed the max
+        }
+        letterToNumber[letter] = currentNumber;
+        currentNumber += increment;
+      }
+    }
+
+    return letterToNumber;
+  }, [settings.difficulty]);
 
   // Memoize the generateProblems function to avoid infinite loops
   const generateProblems = useCallback(() => {
@@ -429,6 +476,9 @@ const WorksheetGenerator = () => {
             }
             break;
           }
+          default:
+            // Skip unsupported operations
+            break;
         }
       }
 
@@ -549,6 +599,9 @@ const WorksheetGenerator = () => {
             }
             break;
           }
+          default:
+            // Skip unsupported operations
+            break;
         }
 
         if (potentialProblem) {
@@ -580,18 +633,31 @@ const WorksheetGenerator = () => {
     const finalProblems = problems.slice(0, settings.numberOfProblems);
     finalProblems.letterToNumber = letterToNumber;
     return finalProblems;
-  }, [settings]); // Add settings as dependency
+  }, [settings.difficulty, settings.numberOfProblems, settings.selectedOperations, settings.secretMessage, generateLetterToNumberMapping]);
 
   // Initialize problems after first render
   useEffect(() => {
     setProblems(generateProblems());
-  }, [generateProblems]); // Add generateProblems as dependency
+  }, [generateProblems]);
 
-  // Update problems whenever relevant settings change
+  // Update problems when settings that affect problem generation change
   useEffect(() => {
-    console.log('Settings changed:', settings);
-    setProblems(generateProblems());
-  }, [generateProblems]); // Only depend on generateProblems which includes settings
+    // Only regenerate when specific settings change
+    if (
+      settings.difficulty !== prevSettings.current.difficulty ||
+      settings.numberOfProblems !== prevSettings.current.numberOfProblems ||
+      JSON.stringify(settings.selectedOperations) !== JSON.stringify(prevSettings.current.selectedOperations) ||
+      settings.secretMessage !== prevSettings.current.secretMessage
+    ) {
+      setProblems(generateProblems());
+      prevSettings.current = {
+        difficulty: settings.difficulty,
+        numberOfProblems: settings.numberOfProblems,
+        selectedOperations: { ...settings.selectedOperations },
+        secretMessage: settings.secretMessage
+      };
+    }
+  }, [settings, generateProblems]);
 
   const handleSettingsChange = (field, value) => {
     if (field === 'difficulty') {
@@ -639,51 +705,6 @@ const WorksheetGenerator = () => {
   const handleRegenerateProblems = () => {
     setProblems(generateProblems());
   };
-
-  function generateLetterToNumberMapping(message) {
-    const letterToNumber = {};
-    const ranges = DIFFICULTY_LEVELS[settings.difficulty].ranges;
-    
-    // Get all unique letters from the message in order of appearance
-    const uniqueLetters = Array.from(new Set(message.toUpperCase().split('').filter(char => char !== ' ')));
-    
-    // Set up initial number and increment based on difficulty
-    let currentNumber;
-    let increment;
-    
-    switch(settings.difficulty) {
-      case 'easy':
-        currentNumber = 2;
-        increment = 1;
-        break;
-      case 'medium':
-        currentNumber = 5;
-        increment = 3;
-        break;
-      case 'hard':
-        currentNumber = 5;
-        increment = 6;
-        break;
-      default:
-        currentNumber = 5;
-        increment = 6;
-    }
-    
-    // First pass: assign numbers to all letters in the message
-    for (const letter of uniqueLetters) {
-      // If letter doesn't have a number yet, assign the next available number
-      if (!letterToNumber[letter]) {
-        // Make sure we don't exceed the maximum allowed number
-        while (currentNumber > ranges.addition.max) {
-          currentNumber = 2; // Reset to 2 if we exceed the max
-        }
-        letterToNumber[letter] = currentNumber;
-        currentNumber += increment;
-      }
-    }
-
-    return letterToNumber;
-  }
 
   return (
     <Container maxWidth="lg">
