@@ -17,8 +17,9 @@ const Worksheet = ({ settings, problems, theme = {
     message: "'Courier New', monospace"
   }
 } }) => {
-  // Use the letterToNumber mapping directly from problems
   const letterToNumber = problems.letterToNumber || {};
+  const messageLetters = new Set(settings.secretMessage.toUpperCase().split('').filter(char => char !== ' '));
+  const entries = Object.entries(letterToNumber).sort((a, b) => a[0].localeCompare(b[0]));
 
   const renderProblem = (problem, index) => (
     <Box 
@@ -227,7 +228,6 @@ const Worksheet = ({ settings, problems, theme = {
   const renderNumberKey = () => {
     // Create a mapping of numbers to letters
     const numberToLetter = {};
-    const messageLetters = new Set(settings.secretMessage.toUpperCase().split('').filter(char => char !== ' '));
     
     // Use the letterToNumber mapping to create the number key
     Object.entries(letterToNumber).forEach(([letter, number]) => {
