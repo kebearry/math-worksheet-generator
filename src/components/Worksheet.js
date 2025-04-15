@@ -225,22 +225,339 @@ const Worksheet = ({ settings, problems, theme = {
   };
 
   const renderNumberKey = () => {
-    // Create a mapping of numbers to letters
-    const numberToLetter = {};
-    const messageLetters = new Set(settings.secretMessage.toUpperCase().split('').filter(char => char !== ' '));
-    
-    // Use the letterToNumber mapping to create the number key
-    Object.entries(letterToNumber).forEach(([letter, number]) => {
-      numberToLetter[number] = letter;
-    });
+    if (!problems.length) return null;
 
-    // Get entries and shuffle them
-    let entries = Object.entries(numberToLetter);
-    for (let i = entries.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [entries[i], entries[j]] = [entries[j], entries[i]];
+    // Check current theme
+    const isMinecraftTheme = settings.theme === 'minecraft';
+    const isSuperheroTheme = settings.theme === 'superhero';
+    const isDinosaurTheme = settings.theme === 'dinosaur';
+    const isCandylandTheme = settings.theme === 'candyland';
+
+    if (isMinecraftTheme) {
+      return (
+        <Box sx={{
+          backgroundColor: '#2F2F2F',
+          border: '3px solid #373737',
+          borderRadius: '0px',
+          padding: '16px',
+          boxShadow: 'inset -2px -4px #0006, inset 2px 2px #ffffff40',
+          position: 'relative',
+          marginBottom: '24px',
+          mt: 4
+        }}>
+          <Typography sx={{
+            color: '#FFFFFF',
+            fontFamily: '"Minecraft", monospace',
+            fontSize: '20px',
+            marginBottom: '16px',
+            textShadow: '2px 2px #000000',
+            fontWeight: 'bold',
+            textAlign: 'left'
+          }}>
+            NUMBER KEY:
+          </Typography>
+          <Box sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            justifyContent: 'flex-start'
+          }}>
+            {Object.entries(letterToNumber).map(([letter, number]) => (
+              <Box
+                key={letter}
+                sx={{
+                  backgroundColor: '#727272',
+                  border: '2px solid #373737',
+                  borderRadius: '0px',
+                  padding: '8px 12px',
+                  color: '#FFFFFF',
+                  fontFamily: '"Minecraft", monospace',
+                  fontSize: '16px',
+                  boxShadow: 'inset -2px -4px #0006, inset 2px 2px #ffffff40',
+                  cursor: 'pointer',
+                  transition: 'all 0.1s ease',
+                  minWidth: '60px',
+                  textAlign: 'center',
+                  position: 'relative',
+                  '&:hover': {
+                    backgroundColor: '#8B8B8B',
+                    transform: 'translateY(-2px)'
+                  }
+                }}
+              >
+                {`${number}=${letter}`}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      );
     }
 
+    if (isSuperheroTheme) {
+      return (
+        <Box sx={{ 
+          mt: 4,
+          backgroundColor: '#1a237e',
+          borderRadius: '8px',
+          padding: '20px',
+          boxShadow: '0 4px 20px rgba(33, 150, 243, 0.4)',
+          border: '3px solid #90caf9',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'radial-gradient(circle at 30% 30%, rgba(33, 150, 243, 0.4) 0%, transparent 70%)',
+            pointerEvents: 'none'
+          }
+        }}>
+          <Typography sx={{ 
+            color: '#ffffff',
+            fontFamily: "'Bangers', cursive",
+            fontSize: '28px',
+            textAlign: 'center',
+            mb: 3,
+            textShadow: '2px 2px 0 #1565c0, -2px -2px 0 #1565c0, 2px -2px 0 #1565c0, -2px 2px 0 #1565c0',
+            letterSpacing: '2px'
+          }}>
+            SECRET CODE KEY
+          </Typography>
+          <Box sx={{ 
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            justifyContent: 'center'
+          }}>
+            {Object.entries(letterToNumber).map(([letter, number]) => (
+              <Box
+                key={letter}
+                sx={{
+                  backgroundColor: '#ff5252',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  color: '#ffffff',
+                  fontFamily: "'Bangers', cursive",
+                  fontSize: '20px',
+                  letterSpacing: '1px',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                  transform: 'rotate(-2deg)',
+                  transition: 'all 0.2s ease',
+                  border: '2px solid #ffffff',
+                  position: 'relative',
+                  '&:hover': {
+                    transform: 'rotate(2deg) scale(1.05)',
+                    boxShadow: '0 6px 12px rgba(0,0,0,0.4)'
+                  },
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: '2px',
+                    left: '2px',
+                    right: '2px',
+                    bottom: '2px',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    borderRadius: '4px',
+                    pointerEvents: 'none'
+                  }
+                }}
+              >
+                {`${number}=${letter}`}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      );
+    }
+
+    if (isDinosaurTheme) {
+      return (
+        <Box sx={{ 
+          mt: 4,
+          backgroundColor: '#2E7D32',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 4px 20px rgba(67, 160, 71, 0.4)',
+          border: '4px solid #81C784',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(129, 199, 132, 0.1) 10px,
+                rgba(129, 199, 132, 0.1) 20px
+              )
+            `,
+            pointerEvents: 'none'
+          }
+        }}>
+          <Typography sx={{ 
+            color: '#FFFFFF',
+            fontFamily: "'Fredoka One', cursive",
+            fontSize: '28px',
+            textAlign: 'center',
+            mb: 3,
+            textShadow: '2px 2px 0 #1B5E20',
+            letterSpacing: '1px',
+            position: 'relative'
+          }}>
+            🦖 NUMBER KEY 🦕
+          </Typography>
+          <Box sx={{ 
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            justifyContent: 'center'
+          }}>
+            {Object.entries(letterToNumber).map(([letter, number]) => (
+              <Box
+                key={letter}
+                sx={{
+                  backgroundColor: '#A5D6A7',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  color: '#1B5E20',
+                  fontFamily: "'Fredoka One', cursive",
+                  fontSize: '18px',
+                  letterSpacing: '1px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
+                  border: '2px solid #388E3C',
+                  position: 'relative',
+                  transition: 'all 0.2s ease',
+                  transform: 'rotate(1deg)',
+                  '&:nth-of-type(2n)': {
+                    transform: 'rotate(-1deg)',
+                    backgroundColor: '#81C784'
+                  },
+                  '&:nth-of-type(3n)': {
+                    transform: 'rotate(2deg)',
+                    backgroundColor: '#C8E6C9'
+                  },
+                  '&:hover': {
+                    transform: 'scale(1.05) rotate(0deg)',
+                    boxShadow: '0 6px 12px rgba(0,0,0,0.3)'
+                  },
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: '2px',
+                    left: '2px',
+                    right: '2px',
+                    bottom: '2px',
+                    border: '1px dashed rgba(27, 94, 32, 0.3)',
+                    borderRadius: '6px',
+                    pointerEvents: 'none'
+                  }
+                }}
+              >
+                {`${number}=${letter}`}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      );
+    }
+
+    if (isCandylandTheme) {
+      return (
+        <Box sx={{ 
+          mt: 4,
+          background: '#FFE5EE',
+          borderRadius: '30px',
+          padding: '24px',
+          boxShadow: '0 8px 32px rgba(255, 105, 180, 0.2)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 182, 193, 0.2) 10px, rgba(255, 182, 193, 0.2) 20px)',
+            pointerEvents: 'none'
+          }
+        }}>
+          <Typography sx={{ 
+            color: '#FF69B4',
+            fontFamily: "'Comic Sans MS', cursive",
+            fontSize: '24px',
+            textAlign: 'center',
+            mb: 2,
+            textShadow: '2px 2px 0px white',
+            letterSpacing: '1px',
+            position: 'relative',
+            fontWeight: 'bold'
+          }}>
+            🍭 Number Key 🍬
+          </Typography>
+          <Box sx={{ 
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px',
+            justifyContent: 'center',
+            padding: '8px'
+          }}>
+            {Object.entries(letterToNumber).map(([letter, number], index) => (
+              <Box
+                key={letter}
+                sx={{
+                  backgroundColor: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '12px',
+                  color: '#FF69B4',
+                  fontFamily: "'Comic Sans MS', cursive",
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  letterSpacing: '1px',
+                  boxShadow: '3px 3px 0px #FFB6C1',
+                  border: '2px solid #FFB6C1',
+                  position: 'relative',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '4px 4px 0px #FFB6C1'
+                  }
+                }}
+              >
+                {`${number}=${letter}`}
+              </Box>
+            ))}
+          </Box>
+          <Box sx={{
+            position: 'absolute',
+            top: -10,
+            left: -10,
+            right: -10,
+            height: '20px',
+            background: 'repeating-linear-gradient(90deg, #FFB6C1, #FFB6C1 20px, transparent 20px, transparent 40px)'
+          }} />
+          <Box sx={{
+            position: 'absolute',
+            bottom: -10,
+            left: -10,
+            right: -10,
+            height: '20px',
+            background: 'repeating-linear-gradient(90deg, #FFB6C1, #FFB6C1 20px, transparent 20px, transparent 40px)'
+          }} />
+        </Box>
+      );
+    }
+
+    // Original theme-specific styling for other themes
     return (
       <Box sx={{ mt: 4, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ 
@@ -266,13 +583,13 @@ const Worksheet = ({ settings, problems, theme = {
           fontSize: '1.2rem',
           boxShadow: '0 4px 8px rgba(255, 182, 193, 0.3)'
         }}>
-          {entries.map(([number, letter], index) => (
+          {Object.entries(letterToNumber).map(([letter, number], index) => (
             <Typography key={index} sx={{ 
               fontWeight: 'bold',
-              backgroundColor: messageLetters.has(letter) ? 'rgba(255, 182, 193, 0.3)' : 'transparent',
+              backgroundColor: 'rgba(255, 182, 193, 0.3)',
               padding: '4px 12px',
               borderRadius: '8px',
-              border: messageLetters.has(letter) ? '1px dashed #FFB6C1' : 'none',
+              border: '1px dashed #FFB6C1',
               color: theme.textColor
             }}>
               {number} = {letter}
