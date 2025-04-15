@@ -3,13 +3,14 @@ import { Box, Typography, Grid} from '@mui/material';
 
 const Worksheet = ({ settings, problems, theme = {
   colors: {
-    background: '#ffffff',
-    problemBg: '#ffffff',
-    messageBg: '#ffffff',
-    keyBg: '#ffffff'
+    background: '#FFF0F3',  // Light pink background
+    problemBg: '#FFFFFF',
+    messageBg: '#FFE5EB',  // Slightly darker pink for message bg
+    keyBg: '#FFE5EB',      // Match message bg
+    numberKey: '#FF69B4'   // Hot pink for text
   },
-  borderStyle: '1px solid black',
-  textColor: '#000000',
+  borderStyle: '1px solid #FFB6C1',  // Light pink border
+  textColor: '#FF1493',  // Deep pink for text
   font: {
     title: "'Verdana', 'Segoe UI', sans-serif",
     problems: "'Verdana', 'Segoe UI', sans-serif",
@@ -25,148 +26,199 @@ const Worksheet = ({ settings, problems, theme = {
       sx={{ 
         border: theme.borderStyle,
         borderRadius: '4px',
-        p: 2,
+        p: 3,
         mb: 2,
         width: '100%',
         bgcolor: theme.colors.problemBg,
         position: 'relative'
       }}
     >
-      {settings.includeCodeBreaker && (
-        <Typography 
-          component="span" 
-          sx={{ 
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: 'primary.main',
-            fontSize: '0.8em',
-            fontFamily: theme.font.problems,
-            fontWeight: 'normal',
-            bgcolor: 'rgba(25, 118, 210, 0.08)',
-            px: 1,
-            py: 0.25,
-            borderRadius: 1,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 0.5,
-            zIndex: 1
-          }}
-        >
-          <span role="img" aria-label="key" style={{ fontSize: '0.9em' }}>🔑</span>
-          {problem.answer}
-        </Typography>
-      )}
-      <Box sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-        pt: settings.includeCodeBreaker ? 3 : 0
-      }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            fontFamily: theme.font.problems,
-            color: theme.textColor,
-            fontSize: '1.2em',
-            mb: 2,
-            textAlign: 'center'
-          }}
-        >
-          {problem.firstNum} {problem.operation} {problem.secondNum} =
-        </Typography>
-        <Box 
-          sx={{ 
-            width: '60%',
-            height: '2px',
-            bgcolor: theme.textColor
-          }} 
-        />
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2
+        }}>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontFamily: theme.font.problems,
+              color: theme.textColor,
+              fontSize: '1.2em',
+              flex: '0 0 auto'
+            }}
+          >
+            {problem.firstNum} {problem.operation} {problem.secondNum} =
+          </Typography>
+          <Box 
+            sx={{ 
+              flex: 1,
+              position: 'relative',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'flex-end'
+            }} 
+          >
+            <Box sx={{ 
+              position: 'absolute',
+              bottom: '0',
+              left: '0',
+              right: '0',
+              borderBottom: `1px solid ${theme.textColor}`
+            }} />
+            {settings.includeCodeBreaker && (
+              <Typography 
+                sx={{ 
+                  position: 'absolute',
+                  top: '0',
+                  right: '8px',
+                  color: '#1565c0',
+                  fontSize: '0.9em',
+                  fontFamily: theme.font.problems,
+                  bgcolor: 'rgba(25, 118, 210, 0.12)',
+                  px: 1.5,
+                  py: 0.25,
+                  borderRadius: 1,
+                  border: '1px dashed #1565c0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  whiteSpace: 'nowrap',
+                  height: 'fit-content'
+                }}
+              >
+                <span style={{ 
+                  fontSize: '0.85em', 
+                  opacity: 0.9,
+                  fontWeight: 'bold'
+                }}>
+                  ANS:
+                </span>
+                {problem.answer}
+              </Typography>
+            )}
+          </Box>
+        </Box>
       </Box>
     </Box>
   );
 
   const renderSecretMessage = () => {
     const message = settings.secretMessage.toUpperCase();
+    const words = message.split(' ').map(word => word.split(''));
     
     return (
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" align="center" gutterBottom sx={{
-          fontFamily: theme.font.message,
-          color: theme.colors.secretMessage || theme.textColor,
+          fontFamily: "'Courier New', monospace",
+          color: theme.textColor,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 1
+          gap: 1,
+          mb: 1.5,
+          textShadow: theme.colors.background === '#1E1E1E' ? '0 0 2px rgba(255,255,255,0.5)' : 'none'
         }}>
           <span>🔍 Crack The Secret Message</span>
         </Typography>
         <Box 
           sx={{ 
-            bgcolor: theme.colors.messageBg,
-            p: 2,
+            border: '1px solid rgba(255,255,255,0.3)',
             borderRadius: '4px',
+            py: 2,
+            px: 2,
             display: 'flex',
-            justifyContent: 'center',
-            gap: 1,
-            flexWrap: 'wrap',
-            border: theme.borderStyle
+            flexDirection: 'column',
+            alignItems: 'center',
+            bgcolor: theme.colors.messageBg,
+            boxShadow: theme.colors.background === '#1E1E1E' ? '0 0 10px rgba(0,0,0,0.5)' : 'none'
           }}
         >
-          {message.split('').map((char, index) => {
-            const isSpace = char === ' ';
-            const isPrefilled = settings.prefilledWords.some(word => 
-              message.indexOf(word.toUpperCase()) === index ||
-              word.toUpperCase().includes(char)
-            );
-            
-            return (
-              <Box 
-                key={index}
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center'
-                }}
-              >
-                <Box
+          <Box sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '8px',
+            my: 1,
+            maxWidth: '100%',
+            px: 1
+          }}>
+            {words.map((word, wordIndex) => (
+              <React.Fragment key={wordIndex}>
+                <Box 
                   sx={{
-                    width: '30px',
-                    height: '30px',
-                    border: isSpace ? 'none' : theme.borderStyle,
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: isSpace ? 'transparent' : (theme.colors.background === '#1E1E1E' ? '#4C4C4C' : '#fff'),
-                    mb: 0.5
+                    gap: '4px',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center'
                   }}
                 >
-                  <Typography variant="body1" sx={{
-                    fontFamily: theme.font.message,
-                    color: theme.colors.secretMessage || theme.textColor,
-                    fontWeight: 'bold'
-                  }}>
-                    {isSpace ? ' ' : (settings.includeCodeBreaker || isPrefilled ? char : '_')}
-                  </Typography>
+                  {word.map((char, charIndex) => {
+                    const isPrefilled = settings.prefilledWords.some(prefilled => 
+                      prefilled.toUpperCase().includes(char)
+                    );
+                    
+                    return (
+                      <Box key={`${wordIndex}-${charIndex}`}>
+                        <Box 
+                          sx={{
+                            width: { xs: '24px', sm: '28px' },
+                            height: { xs: '24px', sm: '28px' },
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 0.5,
+                            bgcolor: 'rgba(255,255,255,0.05)',
+                            boxShadow: 'inset 0 0 5px rgba(0,0,0,0.2)'
+                          }}
+                        >
+                          <Typography sx={{
+                            fontFamily: "'Courier New', monospace",
+                            fontSize: { xs: '14px', sm: '16px' },
+                            lineHeight: 1,
+                            color: theme.textColor,
+                            textShadow: theme.colors.background === '#1E1E1E' ? '0 0 2px rgba(255,255,255,0.5)' : 'none'
+                          }}>
+                            {settings.includeCodeBreaker || isPrefilled ? char : '_'}
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          align="center"
+                          sx={{ 
+                            fontFamily: "'Courier New', monospace",
+                            fontSize: { xs: '12px', sm: '14px' },
+                            lineHeight: 1,
+                            color: theme.textColor,
+                            textShadow: theme.colors.background === '#1E1E1E' ? '0 0 2px rgba(255,255,255,0.5)' : 'none'
+                          }}
+                        >
+                          {letterToNumber[char] || '\u2013'}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
                 </Box>
-                {!isSpace && (
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontFamily: theme.font.message,
-                      fontSize: '0.9rem',
-                      color: theme.colors.secretMessage || theme.textColor,
-                      fontWeight: 'bold',
-                      minHeight: '1.2em'
-                    }}
-                  >
-                    {letterToNumber[char] || '\u2013'}
-                  </Typography>
+                {wordIndex < words.length - 1 && (
+                  <Box sx={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: { xs: '24px', sm: '28px' },
+                    mb: '20px',
+                    opacity: 0.5
+                  }}>
+                    <Typography sx={{ 
+                      color: theme.textColor,
+                      fontSize: '20px',
+                      lineHeight: 1
+                    }}>
+                      ·
+                    </Typography>
+                  </Box>
                 )}
-              </Box>
-            );
-          })}
+              </React.Fragment>
+            ))}
+          </Box>
         </Box>
       </Box>
     );
@@ -192,7 +244,7 @@ const Worksheet = ({ settings, problems, theme = {
     return (
       <Box sx={{ mt: 4, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ 
-          color: theme.colors.numberKey || '#0000FF',
+          color: theme.textColor,
           fontFamily: theme.font.message,
           fontWeight: 'bold',
           mb: 2
@@ -205,22 +257,23 @@ const Worksheet = ({ settings, problems, theme = {
           gap: 3, 
           flexWrap: 'wrap',
           mt: 1,
-          color: theme.colors.numberKey || '#0000FF',
+          color: theme.textColor,
           fontFamily: theme.font.message,
           bgcolor: theme.colors.keyBg,
           p: 2,
-          borderRadius: '4px',
+          borderRadius: '12px',
           border: theme.borderStyle,
-          fontSize: '1.2rem'
+          fontSize: '1.2rem',
+          boxShadow: '0 4px 8px rgba(255, 182, 193, 0.3)'
         }}>
           {entries.map(([number, letter], index) => (
             <Typography key={index} sx={{ 
               fontWeight: 'bold',
-              textShadow: theme.colors.background === '#1E1E1E' ? '0px 0px 2px rgba(0,0,0,0.8)' : 'none',
-              backgroundColor: messageLetters.has(letter) ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+              backgroundColor: messageLetters.has(letter) ? 'rgba(255, 182, 193, 0.3)' : 'transparent',
               padding: '4px 12px',
-              borderRadius: '4px',
-              border: messageLetters.has(letter) ? '1px dashed currentColor' : 'none'
+              borderRadius: '8px',
+              border: messageLetters.has(letter) ? '1px dashed #FFB6C1' : 'none',
+              color: theme.textColor
             }}>
               {number} = {letter}
             </Typography>
@@ -233,39 +286,55 @@ const Worksheet = ({ settings, problems, theme = {
   return (
     <Box sx={{ 
       p: 3,
-      bgcolor: theme.colors.background
+      bgcolor: theme.colors.background,
+      '@media print': {
+        minHeight: '100vh',
+        width: '100vw',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        margin: 0,
+        padding: '24px',
+        boxSizing: 'border-box'
+      }
     }}>
-      {settings.includeCodeBreaker && (
-        <Box 
-          sx={{ 
-            mb: 3,
-            p: 2,
-            border: '2px dashed #ff9800',
-            borderRadius: 1,
-            bgcolor: 'rgba(255, 152, 0, 0.1)',
-            textAlign: 'center'
-          }}
-        >
-          <Typography 
-            variant="subtitle1" 
-            color="warning.main" 
+      <Box sx={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        width: '100%'
+      }}>
+        {settings.includeCodeBreaker && (
+          <Box 
             sx={{ 
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1
+              mb: 3,
+              p: 2,
+              border: '2px dashed #ff9800',
+              borderRadius: 1,
+              bgcolor: 'rgba(255, 152, 0, 0.15)',
+              textAlign: 'center'
             }}
           >
-            <span role="img" aria-label="warning">⚠️</span>
-            TEACHER'S COPY - Answer Key Visible
-            <span role="img" aria-label="warning">⚠️</span>
-          </Typography>
-        </Box>
-      )}
-      
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Typography variant="h4" sx={{
+            <Typography 
+              variant="subtitle1" 
+              color="warning.main" 
+              sx={{ 
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1
+              }}
+            >
+              <span role="img" aria-label="warning">⚠️</span>
+              TEACHER'S COPY - Answer Key Visible
+              <span role="img" aria-label="warning">⚠️</span>
+            </Typography>
+          </Box>
+        )}
+        
+        <Typography variant="h4" align="center" sx={{
           fontFamily: theme.font.title,
           color: theme.textColor,
           fontWeight: 'bold',
@@ -275,65 +344,223 @@ const Worksheet = ({ settings, problems, theme = {
           justifyContent: 'center',
           gap: 2
         }}>
-          <span role="img" aria-label="cute star" style={{ 
-            fontSize: '0.8em',
-            opacity: theme.colors.background === '#1E1E1E' ? 0.9 : 1
-          }}>⭐</span>
+          <span role="img" aria-label="star">⭐</span>
           {settings.title}
-          <span role="img" aria-label="cute star" style={{ 
-            fontSize: '0.8em',
-            opacity: theme.colors.background === '#1E1E1E' ? 0.9 : 1
-          }}>⭐</span>
+          <span role="img" aria-label="star">⭐</span>
         </Typography>
-        <Typography variant="subtitle1" sx={{
-          fontFamily: theme.font.title,
-          color: theme.textColor,
+
+        <Box sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 1,
-          mt: 2
+          mb: 4
         }}>
-          <span role="img" aria-label="cute character" style={{ 
-            fontSize: '1.5em',
-            opacity: theme.colors.background === '#1E1E1E' ? 0.9 : 1
-          }}>🐱</span>
-          <span style={{ 
-            backgroundColor: theme.colors.background === '#1E1E1E' 
-              ? 'rgba(255, 255, 255, 0.1)' 
-              : 'rgba(74, 144, 226, 0.1)',
-            padding: '4px 12px', 
-            borderRadius: '20px',
-            color: theme.textColor,
-            fontWeight: 'bold',
-            border: theme.colors.background === '#1E1E1E' 
-              ? '1px solid rgba(255, 255, 255, 0.2)'
-              : '1px solid rgba(74, 144, 226, 0.3)'
-          }}>
+          <span role="img" aria-label="cat" style={{ fontSize: '1.5em' }}>🐱</span>
+          <Typography 
+            variant="subtitle1"
+            sx={{
+              fontFamily: theme.font.title,
+              color: theme.textColor,
+              bgcolor: 'rgba(25, 118, 210, 0.08)',
+              px: 2,
+              py: 0.5,
+              borderRadius: 2,
+              display: 'inline-block'
+            }}
+          >
             Let's solve some math!
-          </span>
-          <span role="img" aria-label="cute character" style={{ 
-            fontSize: '1.5em',
-            opacity: theme.colors.background === '#1E1E1E' ? 0.9 : 1
-          }}>✨</span>
-        </Typography>
-      </Box>
-      
-      <Grid container spacing={2} sx={{ mt: 2 }}>
-        <Grid item xs={6}>
-          {problems.slice(0, Math.ceil(problems.length / 2)).map((problem, index) => 
-            renderProblem(problem, index)
-          )}
-        </Grid>
-        <Grid item xs={6}>
-          {problems.slice(Math.ceil(problems.length / 2)).map((problem, index) => 
-            renderProblem(problem, index + Math.ceil(problems.length / 2))
-          )}
-        </Grid>
-      </Grid>
+          </Typography>
+          <span role="img" aria-label="sparkles" style={{ fontSize: '1.5em' }}>✨</span>
+        </Box>
 
-      {renderSecretMessage()}
-      {renderNumberKey()}
+        <Grid container spacing={3} sx={{
+          '@media print': {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '24px',
+            width: '100%'
+          }
+        }}>
+          <Grid item xs={12} md={6} sx={{
+            '@media print': {
+              width: '100%',
+              maxWidth: '100%',
+              flexBasis: '100%',
+              padding: '0 !important'
+            }
+          }}>
+            {problems.slice(0, Math.ceil(problems.length / 2)).map((problem, index) => (
+              <Box 
+                key={index}
+                sx={{ 
+                  p: 2,
+                  mb: 2,
+                  '@media print': {
+                    pageBreakInside: 'avoid'
+                  }
+                }}
+              >
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2
+                }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontFamily: theme.font.problems,
+                      color: theme.textColor,
+                      fontSize: '1.2em',
+                      flex: '0 0 auto'
+                    }}
+                  >
+                    {problem.firstNum} {problem.operation} {problem.secondNum} =
+                  </Typography>
+                  <Box 
+                    sx={{ 
+                      flex: 1,
+                      position: 'relative',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'flex-end'
+                    }} 
+                  >
+                    <Box sx={{ 
+                      position: 'absolute',
+                      bottom: '0',
+                      left: '0',
+                      right: '0',
+                      borderBottom: `1px solid ${theme.textColor}`
+                    }} />
+                    {settings.includeCodeBreaker && (
+                      <Typography 
+                        sx={{ 
+                          position: 'absolute',
+                          top: '0',
+                          right: '8px',
+                          color: '#1565c0',
+                          fontSize: '0.9em',
+                          fontFamily: theme.font.problems,
+                          bgcolor: 'rgba(25, 118, 210, 0.12)',
+                          px: 1.5,
+                          py: 0.25,
+                          borderRadius: 1,
+                          border: '1px dashed #1565c0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          whiteSpace: 'nowrap',
+                          height: 'fit-content'
+                        }}
+                      >
+                        <span style={{ 
+                          fontSize: '0.85em', 
+                          opacity: 0.9,
+                          fontWeight: 'bold'
+                        }}>
+                          ANS:
+                        </span>
+                        {problem.answer}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+            ))}
+          </Grid>
+          <Grid item xs={12} md={6} sx={{
+            '@media print': {
+              width: '100%',
+              maxWidth: '100%',
+              flexBasis: '100%',
+              padding: '0 !important'
+            }
+          }}>
+            {problems.slice(Math.ceil(problems.length / 2)).map((problem, index) => (
+              <Box 
+                key={index}
+                sx={{ 
+                  p: 2,
+                  mb: 2,
+                  '@media print': {
+                    pageBreakInside: 'avoid'
+                  }
+                }}
+              >
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2
+                }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontFamily: theme.font.problems,
+                      color: theme.textColor,
+                      fontSize: '1.2em',
+                      flex: '0 0 auto'
+                    }}
+                  >
+                    {problem.firstNum} {problem.operation} {problem.secondNum} =
+                  </Typography>
+                  <Box 
+                    sx={{ 
+                      flex: 1,
+                      position: 'relative',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'flex-end'
+                    }} 
+                  >
+                    <Box sx={{ 
+                      position: 'absolute',
+                      bottom: '0',
+                      left: '0',
+                      right: '0',
+                      borderBottom: `1px solid ${theme.textColor}`
+                    }} />
+                    {settings.includeCodeBreaker && (
+                      <Typography 
+                        sx={{ 
+                          position: 'absolute',
+                          top: '0',
+                          right: '8px',
+                          color: '#1565c0',
+                          fontSize: '0.9em',
+                          fontFamily: theme.font.problems,
+                          bgcolor: 'rgba(25, 118, 210, 0.12)',
+                          px: 1.5,
+                          py: 0.25,
+                          borderRadius: 1,
+                          border: '1px dashed #1565c0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          whiteSpace: 'nowrap',
+                          height: 'fit-content'
+                        }}
+                      >
+                        <span style={{ 
+                          fontSize: '0.85em', 
+                          opacity: 0.9,
+                          fontWeight: 'bold'
+                        }}>
+                          ANS:
+                        </span>
+                        {problem.answer}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+            ))}
+          </Grid>
+        </Grid>
+
+        {renderSecretMessage()}
+        {renderNumberKey()}
+      </Box>
     </Box>
   );
 };
