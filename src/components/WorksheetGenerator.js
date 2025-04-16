@@ -22,7 +22,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Snackbar
 } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import html2canvas from 'html2canvas';
@@ -30,6 +31,7 @@ import { jsPDF } from 'jspdf';
 import Worksheet from './Worksheet';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 const THEMES = {
   default: {
@@ -166,7 +168,7 @@ const DIFFICULTY_LEVELS = {
   }
 };
 
-const WorksheetGenerator = () => {
+const WorksheetGenerator = ({ isStudentView = false }) => {
   const initialState = {
     title: "Numbers Under 100",
     numberOfProblems: 10,
@@ -192,6 +194,8 @@ const WorksheetGenerator = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
   const prevSettings = useRef(initialState);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const worksheetRef = useRef();
   
@@ -747,540 +751,627 @@ const WorksheetGenerator = () => {
     setProblems(generateProblems());
   };
 
+  const generateWorksheetId = () => {
+    return Math.random().toString(36).substring(2, 15);
+  };
+
+  const handleGenerateStudentLink = () => {
+    const worksheetId = generateWorksheetId();
+    const studentLink = `${window.location.origin}/student/${worksheetId}`;
+    
+    navigator.clipboard.writeText(studentLink).then(() => {
+      setSnackbarMessage('Student link copied to clipboard!');
+      setSnackbarOpen(true);
+    });
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
+
   return (
     <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Worksheet Settings
-              </Typography>
-              
-              {/* Template Management Section */}
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  mb: 3, 
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 2
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <span role="img" aria-label="save">💾</span> Save Current Settings
-                  </Typography>
-                </Box>
-
-                {error && (
-                  <Alert 
-                    severity="error" 
-                    sx={{ mb: 2 }}
-                    action={
-                      <IconButton
-                        size="small"
-                        onClick={() => setError(null)}
-                      >
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    }
-                  >
-                    {error}
-                  </Alert>
-                )}
-
-                <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-                  <TextField
-                    size="small"
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                    placeholder="Enter template name"
-                    sx={{ flex: 1 }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={saveTemplate}
-                    disabled={!templateName.trim() || isLoading}
-                    size="small"
-                    startIcon={isLoading ? <CircularProgress size={20} /> : null}
-                  >
-                    Save
-                  </Button>
-                </Box>
-
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <span role="img" aria-label="templates">📚</span> Saved Templates
+      {isStudentView ? (
+        // Student view - ONLY show the worksheet
+        <Worksheet 
+          settings={settings}
+          problems={problems}
+          theme={THEMES[settings.theme]}
+          isStudentView={true}
+        />
+      ) : (
+        // Teacher view - show full interface
+        <Box sx={{ my: 4 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Worksheet Settings
                 </Typography>
-
-                {isLoading && !templates.length ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : templates.length > 0 ? (
-                  <List sx={{ 
-                    maxHeight: '300px', 
-                    overflow: 'auto',
+                
+                {/* Template Management Section */}
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    p: 2, 
+                    mb: 3, 
                     border: '1px solid',
                     borderColor: 'divider',
-                    borderRadius: 1,
-                    bgcolor: 'background.paper'
-                  }}>
-                    {templates.map((template) => (
-                      <ListItem
-                        key={template._id}
-                        disablePadding
-                        secondaryAction={
-                          <IconButton
-                            edge="end"
-                            onClick={(e) => handleDeleteClick(template, e)}
-                            title="Delete template"
-                            size="small"
-                            sx={{ mr: 1 }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        }
-                        sx={{
-                          borderBottom: '1px solid',
-                          borderColor: 'divider',
-                          '&:last-child': {
-                            borderBottom: 'none'
-                          }
-                        }}
-                      >
-                        <ListItemButton 
-                          onClick={() => loadTemplate(template._id)}
-                          sx={{ 
-                            py: 1.5,
-                            '&:hover': {
-                              bgcolor: 'action.hover',
-                              '& .apply-settings-text': {
-                                opacity: 1,
-                                transform: 'translateX(0)',
-                              }
-                            },
-                            position: 'relative',
-                            pl: 2
-                          }}
+                    borderRadius: 2
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span role="img" aria-label="save">💾</span> Save Current Settings
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert 
+                      severity="error" 
+                      sx={{ mb: 2 }}
+                      action={
+                        <IconButton
+                          size="small"
+                          onClick={() => setError(null)}
                         >
-                          <Box sx={{ width: '100%' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 500, flex: 1 }}>
-                                {template.name}
-                              </Typography>
-                              <Typography 
-                                variant="caption" 
-                                className="apply-settings-text"
-                                sx={{ 
-                                  color: 'primary.main',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 0.5,
-                                  opacity: 0,
-                                  transform: 'translateX(-8px)',
-                                  transition: 'all 0.2s ease-in-out',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 400
-                                }}
-                              >
-                                Apply settings
-                              </Typography>
-                            </Box>
-                            <Box sx={{ 
-                              display: 'flex', 
-                              gap: 1,
-                              flexWrap: 'wrap'
-                            }}>
-                              <Typography 
-                                component="span" 
-                                variant="caption" 
-                                sx={{ 
-                                  color: 'text.secondary',
-                                  bgcolor: 'action.hover',
-                                  px: 1,
-                                  py: 0.25,
-                                  borderRadius: 1
-                                }}
-                              >
-                                {template.settings.difficulty.charAt(0).toUpperCase() + template.settings.difficulty.slice(1)}
-                              </Typography>
-                              {Object.entries(template.settings.selectedOperations)
-                                .filter(([_, enabled]) => enabled)
-                                .map(([op]) => (
-                                  <Typography
-                                    key={op}
-                                    component="span"
-                                    variant="caption"
-                                    sx={{ 
-                                      color: 'text.secondary',
-                                      bgcolor: 'action.hover',
-                                      px: 1,
-                                      py: 0.25,
-                                      borderRadius: 1
-                                    }}
-                                  >
-                                    {op.charAt(0).toUpperCase() + op.slice(1)}
-                                  </Typography>
-                                ))}
-                            </Box>
-                          </Box>
-                        </ListItemButton>
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Box 
-                    sx={{ 
-                      p: 3, 
-                      textAlign: 'center',
-                      border: '1px dashed',
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      }
+                    >
+                      {error}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+                    <TextField
+                      size="small"
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      placeholder="Enter template name"
+                      sx={{ flex: 1 }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={saveTemplate}
+                      disabled={!templateName.trim() || isLoading}
+                      size="small"
+                      startIcon={isLoading ? <CircularProgress size={20} /> : null}
+                    >
+                      Save
+                    </Button>
+                  </Box>
+
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span role="img" aria-label="templates">📚</span> Saved Templates
+                  </Typography>
+
+                  {isLoading && !templates.length ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  ) : templates.length > 0 ? (
+                    <List sx={{ 
+                      maxHeight: '300px', 
+                      overflow: 'auto',
+                      border: '1px solid',
                       borderColor: 'divider',
                       borderRadius: 1,
                       bgcolor: 'background.paper'
-                    }}
-                  >
-                    <Typography color="text.secondary" variant="body2">
-                      No templates saved yet
-                    </Typography>
-                    <Typography color="text.secondary" variant="caption" display="block">
-                      Save your current settings as a template to reuse them later
-                    </Typography>
-                  </Box>
-                )}
-              </Paper>
-
-              {/* Reset Settings Button */}
-              <Button 
-                variant="outlined" 
-                color="secondary"
-                fullWidth 
-                onClick={() => setSettings(initialState)}
-                sx={{ 
-                  mb: 3,
-                  py: 1,
-                  borderWidth: 2,
-                  bgcolor: 'rgba(245, 0, 87, 0.05)',
-                  '&:hover': {
-                    bgcolor: 'rgba(245, 0, 87, 0.1)',
-                    borderWidth: 2
-                  }
-                }}
-              >
-                <span style={{ fontSize: '1.2em', marginRight: '8px' }}>↺</span>
-                Reset All Settings
-              </Button>
-
-              {/* Teacher Mode Section */}
-              <Box 
-                sx={{ 
-                  mb: 3, 
-                  p: 2, 
-                  border: '2px solid #ff9800',
-                  borderRadius: 1,
-                  bgcolor: 'rgba(255, 152, 0, 0.1)',
-                }}
-              >
-                <Typography 
-                  variant="subtitle1" 
-                  color="warning.main" 
-                  sx={{ 
-                    fontWeight: 'bold', 
-                    mb: 1,
-                    fontSize: { xs: '0.875rem', sm: '1rem' }
-                  }}
-                >
-                  👩‍🏫 Teacher Mode
-                </Typography>
-                <FormControlLabel
-                  sx={{
-                    display: 'flex',
-                    margin: 0,
-                    alignItems: 'flex-start',
-                    '& .MuiFormControlLabel-label': {
-                      flex: 1,
-                      fontSize: { xs: '0.875rem', sm: '1rem' }
-                    }
-                  }}
-                  control={
-                    <Switch
-                      checked={settings.includeCodeBreaker}
-                      onChange={(e) => {
-                        handleSettingsChange('includeCodeBreaker', e.target.checked);
+                    }}>
+                      {templates.map((template) => (
+                        <ListItem
+                          key={template._id}
+                          disablePadding
+                          secondaryAction={
+                            <IconButton
+                              edge="end"
+                              onClick={(e) => handleDeleteClick(template, e)}
+                              title="Delete template"
+                              size="small"
+                              sx={{ mr: 1 }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          }
+                          sx={{
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                            '&:last-child': {
+                              borderBottom: 'none'
+                            }
+                          }}
+                        >
+                          <ListItemButton 
+                            onClick={() => loadTemplate(template._id)}
+                            sx={{ 
+                              py: 1.5,
+                              '&:hover': {
+                                bgcolor: 'action.hover',
+                                '& .apply-settings-text': {
+                                  opacity: 1,
+                                  transform: 'translateX(0)',
+                                }
+                              },
+                              position: 'relative',
+                              pl: 2
+                            }}
+                          >
+                            <Box sx={{ width: '100%' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                <Typography variant="body1" sx={{ fontWeight: 500, flex: 1 }}>
+                                  {template.name}
+                                </Typography>
+                                <Typography 
+                                  variant="caption" 
+                                  className="apply-settings-text"
+                                  sx={{ 
+                                    color: 'primary.main',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    opacity: 0,
+                                    transform: 'translateX(-8px)',
+                                    transition: 'all 0.2s ease-in-out',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 400
+                                  }}
+                                >
+                                  Apply settings
+                                </Typography>
+                              </Box>
+                              <Box sx={{ 
+                                display: 'flex', 
+                                gap: 1,
+                                flexWrap: 'wrap'
+                              }}>
+                                <Typography 
+                                  component="span" 
+                                  variant="caption" 
+                                  sx={{ 
+                                    color: 'text.secondary',
+                                    bgcolor: 'action.hover',
+                                    px: 1,
+                                    py: 0.25,
+                                    borderRadius: 1
+                                  }}
+                                >
+                                  {template.settings.difficulty.charAt(0).toUpperCase() + template.settings.difficulty.slice(1)}
+                                </Typography>
+                                {Object.entries(template.settings.selectedOperations)
+                                  .filter(([_, enabled]) => enabled)
+                                  .map(([op]) => (
+                                    <Typography
+                                      key={op}
+                                      component="span"
+                                      variant="caption"
+                                      sx={{ 
+                                        color: 'text.secondary',
+                                        bgcolor: 'action.hover',
+                                        px: 1,
+                                        py: 0.25,
+                                        borderRadius: 1
+                                      }}
+                                    >
+                                      {op.charAt(0).toUpperCase() + op.slice(1)}
+                                    </Typography>
+                                  ))}
+                              </Box>
+                            </Box>
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Box 
+                      sx={{ 
+                        p: 3, 
+                        textAlign: 'center',
+                        border: '1px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        bgcolor: 'background.paper'
                       }}
-                      color="warning"
-                      sx={{ mt: 0.5 }}
-                    />
-                  }
-                  label={
-                    <Box sx={{ ml: 1 }}>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          fontWeight: 'bold',
-                          fontSize: { xs: '0.875rem', sm: '1rem' }
-                        }}
-                      >
-                        Show Answer Key
+                    >
+                      <Typography color="text.secondary" variant="body2">
+                        No templates saved yet
                       </Typography>
-                      <Typography 
-                        variant="caption" 
-                        color="text.secondary"
-                        sx={{
-                          display: 'block',
-                          mt: 0.5,
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                        }}
-                      >
-                        ⚠️ This will reveal all answers and the secret message. Use only for checking or demonstration.
+                      <Typography color="text.secondary" variant="caption" display="block">
+                        Save your current settings as a template to reuse them later
                       </Typography>
                     </Box>
-                  }
-                />
-              </Box>
+                  )}
+                </Paper>
 
-              <Box sx={{ mb: 2 }}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>Theme</InputLabel>
-                  <Select
-                    value={settings.theme}
-                    onChange={(e) => {
-                      handleSettingsChange('theme', e.target.value);
-                    }}
-                    label="Theme"
-                  >
-                    {Object.entries(THEMES).map(([key, theme]) => (
-                      <MenuItem key={key} value={key}>{theme.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>Difficulty</InputLabel>
-                  <Select
-                    value={settings.difficulty}
-                    onChange={(e) => {
-                      handleSettingsChange('difficulty', e.target.value);
-                    }}
-                    label="Difficulty"
-                  >
-                    {Object.entries(DIFFICULTY_LEVELS).map(([key, level]) => (
-                      <MenuItem key={key} value={key}>{level.name}</MenuItem>
-                    ))}
-                  </Select>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, ml: 1 }}>
-                    {settings.difficulty === 'easy' && (
-                      <>
-                        Easy Level Ranges:
-                        <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                          <li>Addition: numbers up to 10</li>
-                          <li>Subtraction: numbers up to 10</li>
-                          <li>Multiplication: numbers up to 5</li>
-                          <li>Division: numbers up to 20, divisors up to 5</li>
-                        </ul>
-                        Perfect for beginners and early learners.
-                      </>
-                    )}
-                    {settings.difficulty === 'medium' && (
-                      <>
-                        Medium Level Ranges:
-                        <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                          <li>Addition: numbers up to 20</li>
-                          <li>Subtraction: numbers up to 20</li>
-                          <li>Multiplication: numbers up to 10</li>
-                          <li>Division: numbers up to 50, divisors up to 10</li>
-                        </ul>
-                        Good for students who have mastered basic operations.
-                      </>
-                    )}
-                    {settings.difficulty === 'hard' && (
-                      <>
-                        Hard Level Ranges:
-                        <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                          <li>Addition: numbers up to 100</li>
-                          <li>Subtraction: numbers up to 100</li>
-                          <li>Multiplication: numbers up to 144 (full times tables)</li>
-                          <li>Division: numbers up to 144, divisors up to 12</li>
-                        </ul>
-                        Challenging problems for advanced students.
-                      </>
-                    )}
-                  </Typography>
-                </FormControl>
-                <TextField
-                  fullWidth
-                  label="Worksheet Title"
-                  value={settings.title}
-                  onChange={(e) => {
-                    handleSettingsChange('title', e.target.value);
-                  }}
-                  margin="normal"
-                />
-                <TextField
-                  fullWidth
-                  label="Number of Problems"
-                  type="number"
-                  value={settings.numberOfProblems}
-                  onChange={(e) => {
-                    handleSettingsChange('numberOfProblems', parseInt(e.target.value) || 10);
-                  }}
-                  margin="normal"
-                  inputProps={{ 
-                    min: 10,
-                    step: 1
-                  }}
-                  helperText="Minimum 10 problems required"
-                />
-                <TextField
-                  fullWidth
-                  label="Secret Message"
-                  value={settings.secretMessage}
-                  onChange={(e) => {
-                    handleSettingsChange('secretMessage', e.target.value);
-                  }}
-                  margin="normal"
-                  multiline
-                />
-                <TextField
-                  fullWidth
-                  label="Prefilled Words (comma-separated)"
-                  value={settings.prefilledWords.join(', ')}
-                  onChange={(e) => {
-                    const words = e.target.value.split(',').map(w => w.trim()).filter(w => w);
-                    handleSettingsChange('prefilledWords', words);
-                  }}
-                  margin="normal"
-                  helperText="Enter words to show as hints, separated by commas"
-                />
-                <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
-                  Operations
-                </Typography>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.selectedOperations.addition}
-                      onChange={(e) => {
-                        handleSettingsChange('selectedOperations.addition', e.target.checked);
-                      }}
-                    />
-                  }
-                  label="Addition (+)"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.selectedOperations.subtraction}
-                      onChange={(e) => {
-                        handleSettingsChange('selectedOperations.subtraction', e.target.checked);
-                      }}
-                    />
-                  }
-                  label="Subtraction (-)"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.selectedOperations.multiplication}
-                      onChange={(e) => {
-                        handleSettingsChange('selectedOperations.multiplication', e.target.checked);
-                      }}
-                    />
-                  }
-                  label="Multiplication (×)"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.selectedOperations.division}
-                      onChange={(e) => {
-                        handleSettingsChange('selectedOperations.division', e.target.checked);
-                      }}
-                    />
-                  }
-                  label="Division (÷)"
-                />
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  fullWidth 
-                  onClick={handleRegenerateProblems}
-                  sx={{ mt: 2 }}
-                >
-                  Generate New Problems
-                </Button>
+                {/* Reset Settings Button */}
                 <Button 
                   variant="outlined" 
-                  color="primary" 
+                  color="secondary"
                   fullWidth 
-                  onClick={handlePrint}
-                  sx={{ mt: 2 }}
+                  onClick={() => setSettings(initialState)}
+                  sx={{ 
+                    mb: 3,
+                    py: 1,
+                    borderWidth: 2,
+                    bgcolor: 'rgba(245, 0, 87, 0.05)',
+                    '&:hover': {
+                      bgcolor: 'rgba(245, 0, 87, 0.1)',
+                      borderWidth: 2
+                    }
+                  }}
                 >
-                  Export PDF
+                  <span style={{ fontSize: '1.2em', marginRight: '8px' }}>↺</span>
+                  Reset All Settings
                 </Button>
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 3 }}>
-              <div ref={worksheetRef}>
-                <Worksheet 
-                  settings={settings}
-                  problems={problems}
-                  theme={THEMES[settings.theme]}
-                />
-              </div>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => {
-          setDeleteDialogOpen(false);
-          setTemplateToDelete(null);
-        }}
-        PaperProps={{
-          sx: {
-            width: '100%',
-            maxWidth: 400,
-            p: 1
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          Delete Template?
-        </DialogTitle>
-        <DialogContent sx={{ pb: 2 }}>
-          <Typography>
-            Are you sure you want to delete "{templateToDelete?.name}"? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => {
+                {/* Teacher Mode Section */}
+                <Box 
+                  sx={{ 
+                    mb: 3, 
+                    p: 2, 
+                    border: '2px solid #ff9800',
+                    borderRadius: 1,
+                    bgcolor: 'rgba(255, 152, 0, 0.1)',
+                  }}
+                >
+                  <Typography 
+                    variant="subtitle1" 
+                    color="warning.main" 
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      mb: 1,
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }}
+                  >
+                    👩‍🏫 Teacher Mode
+                  </Typography>
+                  <FormControlLabel
+                    sx={{
+                      display: 'flex',
+                      margin: 0,
+                      alignItems: 'flex-start',
+                      '& .MuiFormControlLabel-label': {
+                        flex: 1,
+                        fontSize: { xs: '0.875rem', sm: '1rem' }
+                      }
+                    }}
+                    control={
+                      <Switch
+                        checked={settings.includeCodeBreaker}
+                        onChange={(e) => {
+                          handleSettingsChange('includeCodeBreaker', e.target.checked);
+                        }}
+                        color="warning"
+                        sx={{ mt: 0.5 }}
+                      />
+                    }
+                    label={
+                      <Box sx={{ ml: 1 }}>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            fontWeight: 'bold',
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                          }}
+                        >
+                          Show Answer Key
+                        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          sx={{
+                            display: 'block',
+                            mt: 0.5,
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                          }}
+                        >
+                          ⚠️ This will reveal all answers and the secret message. Use only for checking or demonstration.
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+
+                <Box sx={{ mb: 2 }}>
+                  <FormControl fullWidth margin="normal">
+                    <InputLabel>Theme</InputLabel>
+                    <Select
+                      value={settings.theme}
+                      onChange={(e) => {
+                        handleSettingsChange('theme', e.target.value);
+                      }}
+                      label="Theme"
+                    >
+                      {Object.entries(THEMES).map(([key, theme]) => (
+                        <MenuItem key={key} value={key}>{theme.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth margin="normal">
+                    <InputLabel>Difficulty</InputLabel>
+                    <Select
+                      value={settings.difficulty}
+                      onChange={(e) => {
+                        handleSettingsChange('difficulty', e.target.value);
+                      }}
+                      label="Difficulty"
+                    >
+                      {Object.entries(DIFFICULTY_LEVELS).map(([key, level]) => (
+                        <MenuItem key={key} value={key}>{level.name}</MenuItem>
+                      ))}
+                    </Select>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, ml: 1 }}>
+                      {settings.difficulty === 'easy' && (
+                        <>
+                          Easy Level Ranges:
+                          <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                            <li>Addition: numbers up to 10</li>
+                            <li>Subtraction: numbers up to 10</li>
+                            <li>Multiplication: numbers up to 5</li>
+                            <li>Division: numbers up to 20, divisors up to 5</li>
+                          </ul>
+                          Perfect for beginners and early learners.
+                        </>
+                      )}
+                      {settings.difficulty === 'medium' && (
+                        <>
+                          Medium Level Ranges:
+                          <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                            <li>Addition: numbers up to 20</li>
+                            <li>Subtraction: numbers up to 20</li>
+                            <li>Multiplication: numbers up to 10</li>
+                            <li>Division: numbers up to 50, divisors up to 10</li>
+                          </ul>
+                          Good for students who have mastered basic operations.
+                        </>
+                      )}
+                      {settings.difficulty === 'hard' && (
+                        <>
+                          Hard Level Ranges:
+                          <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                            <li>Addition: numbers up to 100</li>
+                            <li>Subtraction: numbers up to 100</li>
+                            <li>Multiplication: numbers up to 144 (full times tables)</li>
+                            <li>Division: numbers up to 144, divisors up to 12</li>
+                          </ul>
+                          Challenging problems for advanced students.
+                        </>
+                      )}
+                    </Typography>
+                  </FormControl>
+                  <TextField
+                    fullWidth
+                    label="Worksheet Title"
+                    value={settings.title}
+                    onChange={(e) => {
+                      handleSettingsChange('title', e.target.value);
+                    }}
+                    margin="normal"
+                  />
+                  <TextField
+                    fullWidth
+                    label="Number of Problems"
+                    type="number"
+                    value={settings.numberOfProblems}
+                    onChange={(e) => {
+                      handleSettingsChange('numberOfProblems', parseInt(e.target.value) || 10);
+                    }}
+                    margin="normal"
+                    inputProps={{ 
+                      min: 10,
+                      step: 1
+                    }}
+                    helperText="Minimum 10 problems required"
+                  />
+                  <TextField
+                    fullWidth
+                    label="Secret Message"
+                    value={settings.secretMessage}
+                    onChange={(e) => {
+                      handleSettingsChange('secretMessage', e.target.value);
+                    }}
+                    margin="normal"
+                    multiline
+                  />
+                  <TextField
+                    fullWidth
+                    label="Prefilled Words (comma-separated)"
+                    value={settings.prefilledWords.join(', ')}
+                    onChange={(e) => {
+                      const words = e.target.value.split(',').map(w => w.trim()).filter(w => w);
+                      handleSettingsChange('prefilledWords', words);
+                    }}
+                    margin="normal"
+                    helperText="Enter words to show as hints, separated by commas"
+                  />
+                  <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
+                    Operations
+                  </Typography>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.selectedOperations.addition}
+                        onChange={(e) => {
+                          handleSettingsChange('selectedOperations.addition', e.target.checked);
+                        }}
+                      />
+                    }
+                    label="Addition (+)"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.selectedOperations.subtraction}
+                        onChange={(e) => {
+                          handleSettingsChange('selectedOperations.subtraction', e.target.checked);
+                        }}
+                      />
+                    }
+                    label="Subtraction (-)"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.selectedOperations.multiplication}
+                        onChange={(e) => {
+                          handleSettingsChange('selectedOperations.multiplication', e.target.checked);
+                        }}
+                      />
+                    }
+                    label="Multiplication (×)"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.selectedOperations.division}
+                        onChange={(e) => {
+                          handleSettingsChange('selectedOperations.division', e.target.checked);
+                        }}
+                      />
+                    }
+                    label="Division (÷)"
+                  />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={handleRegenerateProblems}
+                      sx={{ 
+                        bgcolor: '#2196f3',
+                        '&:hover': { bgcolor: '#1976d2' },
+                        textTransform: 'uppercase',
+                        borderRadius: 1,
+                        py: 1.5,
+                        boxShadow: 'none',
+                        fontSize: '0.875rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      Generate New Problems
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      onClick={handlePrint}
+                      sx={{ 
+                        color: 'text.primary',
+                        borderColor: 'divider',
+                        bgcolor: '#ffffff',
+                        '&:hover': { 
+                          borderColor: 'text.primary', 
+                          bgcolor: '#ffffff'
+                        },
+                        textTransform: 'uppercase',
+                        borderRadius: 1,
+                        py: 1.5,
+                        boxShadow: 'none',
+                        fontSize: '0.875rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      Export PDF
+                    </Button>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={handleGenerateStudentLink}
+                      sx={{ 
+                        bgcolor: '#f50057', // Material-UI's default secondary color
+                        color: '#ffffff',
+                        '&:hover': { 
+                          bgcolor: '#c51162'
+                        },
+                        textTransform: 'uppercase',
+                        borderRadius: 1,
+                        py: 1.5,
+                        boxShadow: 'none',
+                        fontSize: '0.875rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <ContentCopyIcon sx={{ fontSize: 18 }} />
+                        Copy Student Link
+                      </Box>
+                    </Button>
+                  </Box>
+                </Box>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={8}>
+              <Paper sx={{ p: 3 }}>
+                <div ref={worksheetRef}>
+                  <Worksheet 
+                    settings={settings}
+                    problems={problems}
+                    theme={THEMES[settings.theme]}
+                    isStudentView={false}
+                  />
+                </div>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+      )}
+
+      {/* Only show dialogs and snackbar in teacher view */}
+      {!isStudentView && (
+        <>
+          <Dialog
+            open={deleteDialogOpen}
+            onClose={() => {
               setDeleteDialogOpen(false);
               setTemplateToDelete(null);
             }}
-            color="inherit"
-            variant="outlined"
-            size="small"
+            PaperProps={{
+              sx: {
+                width: '100%',
+                maxWidth: 400,
+                p: 1
+              }
+            }}
           >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => deleteTemplate(templateToDelete?._id)}
-            color="error"
-            variant="contained"
-            size="small"
-            disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={16} /> : null}
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <DialogTitle sx={{ pb: 1 }}>
+              Delete Template?
+            </DialogTitle>
+            <DialogContent sx={{ pb: 2 }}>
+              <Typography>
+                Are you sure you want to delete "{templateToDelete?.name}"? This action cannot be undone.
+              </Typography>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setTemplateToDelete(null);
+                }}
+                color="inherit"
+                variant="outlined"
+                size="small"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => deleteTemplate(templateToDelete?._id)}
+                color="error"
+                variant="contained"
+                size="small"
+                disabled={isLoading}
+                startIcon={isLoading ? <CircularProgress size={16} /> : null}
+              >
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Snackbar
+            open={snackbarOpen}
+            autoHideDuration={3000}
+            onClose={handleSnackbarClose}
+            message={snackbarMessage}
+          />
+        </>
+      )}
     </Container>
   );
 };

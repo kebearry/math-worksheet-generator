@@ -1,6 +1,7 @@
 import React from 'react';
 import { ThemeProvider, createTheme } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import WorksheetGenerator from './components/WorksheetGenerator';
 
 const theme = createTheme({
@@ -18,7 +19,12 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <WorksheetGenerator />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<WorksheetGenerator />} />
+          <Route path="/student/:id" element={<WorksheetGenerator isStudentView={true} />} />
+        </Routes>
+      </BrowserRouter>
     </ThemeProvider>
   );
 }
