@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
 import { Box, Typography, Grid, TextField } from '@mui/material';
 
-const Worksheet = ({ settings, problems, theme = {
-  colors: {
-    background: '#FFF0F3',  // Light pink background
-    problemBg: '#FFFFFF',
-    messageBg: '#FFE5EB',  // Slightly darker pink for message bg
-    keyBg: '#FFE5EB',      // Match message bg
-    numberKey: '#FF69B4'   // Hot pink for text
-  },
-  borderStyle: '1px solid #FFB6C1',  // Light pink border
-  textColor: '#FF1493',  // Deep pink for text
-  font: {
-    title: "'Verdana', 'Segoe UI', sans-serif",
-    problems: "'Verdana', 'Segoe UI', sans-serif",
-    message: "'Courier New', monospace"
-  }
-}, isStudentView = false }) => {
+const Worksheet = ({ 
+  settings, 
+  problems, 
+  letterToNumber = {}, 
+  theme = {
+    colors: {
+      background: '#FFF0F3',  // Light pink background
+      problemBg: '#FFFFFF',
+      messageBg: '#FFE5EB',  // Slightly darker pink for message bg
+      keyBg: '#FFE5EB',      // Match message bg
+      numberKey: '#FF69B4'   // Hot pink for text
+    },
+    borderStyle: '1px solid #FFB6C1',  // Light pink border
+    textColor: '#FF1493',  // Deep pink for text
+    font: {
+      title: "'Verdana', 'Segoe UI', sans-serif",
+      problems: "'Verdana', 'Segoe UI', sans-serif",
+      message: "'Courier New', monospace"
+    }
+  }, 
+  isStudentView = false 
+}) => {
   const [studentAnswers, setStudentAnswers] = useState({});
   const [secretMessageInputs, setSecretMessageInputs] = useState({});
-  const letterToNumber = problems.letterToNumber || {};
 
   const handleAnswerChange = (problemIndex, value) => {
     setStudentAnswers(prev => ({

@@ -1,17 +1,13 @@
 import React from 'react';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import WorksheetGenerator from './components/WorksheetGenerator';
+import StudentView from './components/StudentView';
 
 const theme = createTheme({
   palette: {
-    primary: {
-      main: '#2196f3',
-    },
-    secondary: {
-      main: '#f50057',
-    },
+    mode: 'light',
   },
 });
 
@@ -19,12 +15,12 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
+      <Router>
         <Routes>
-          <Route path="/" element={<WorksheetGenerator />} />
-          <Route path="/student/:id" element={<WorksheetGenerator isStudentView={true} />} />
+          <Route path="/" element={<WorksheetGenerator isStudentView={false} />} />
+          <Route path="/student" element={<StudentView />} />
         </Routes>
-      </BrowserRouter>
+      </Router>
     </ThemeProvider>
   );
 }

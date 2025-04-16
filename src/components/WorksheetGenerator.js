@@ -138,6 +138,8 @@ const THEMES = {
   }
 };
 
+export { THEMES };
+
 const DIFFICULTY_LEVELS = {
   easy: {
     name: 'Easy',
@@ -180,7 +182,7 @@ const WorksheetGenerator = ({ isStudentView = false }) => {
       division: false
     },
     secretMessage: "SUPERHEROES SAVE THE DAY",
-    includeCodeBreaker: false,
+    includeCodeBreaker: false,  // Set to false by default
     prefilledWords: ['THE', 'SAVE'],
     theme: 'default'
   };
@@ -756,8 +758,20 @@ const WorksheetGenerator = ({ isStudentView = false }) => {
   };
 
   const handleGenerateStudentLink = () => {
-    const worksheetId = generateWorksheetId();
-    const studentLink = `${window.location.origin}/student/${worksheetId}`;
+    // Create a data object with current settings and problems
+    const worksheetData = {
+      settings: {
+        ...settings,
+        includeCodeBreaker: false  // Never include answer key in student view
+      },
+      problems: problems
+    };
+
+    // Encode the data using encodeURIComponent to handle special characters
+    const encodedData = encodeURIComponent(JSON.stringify(worksheetData));
+    
+    // Create the student link with the encoded data
+    const studentLink = `${window.location.origin}/student?data=${encodedData}`;
     
     navigator.clipboard.writeText(studentLink).then(() => {
       setSnackbarMessage('Student link copied to clipboard!');
@@ -778,6 +792,7 @@ const WorksheetGenerator = ({ isStudentView = false }) => {
           problems={problems}
           theme={THEMES[settings.theme]}
           isStudentView={true}
+          letterToNumber={problems.letterToNumber}
         />
       ) : (
         // Teacher view - show full interface
@@ -1306,6 +1321,7 @@ const WorksheetGenerator = ({ isStudentView = false }) => {
                     problems={problems}
                     theme={THEMES[settings.theme]}
                     isStudentView={false}
+                    letterToNumber={problems.letterToNumber}
                   />
                 </div>
               </Paper>
