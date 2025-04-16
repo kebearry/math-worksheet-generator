@@ -755,19 +755,15 @@ const Worksheet = ({
   return (
     <Box sx={{ 
       bgcolor: theme.colors.background,
-      ...(isStudentView ? {
-        minHeight: '100vh',
-        width: '100vw',
-        margin: 0,
-        padding: 0,
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        display: 'flex',
-        justifyContent: 'center'
-      } : {
-        p: 3
-      }),
+      minHeight: '100vh',
+      width: '100vw',
+      margin: 0,
+      padding: 0,
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      display: 'flex',
+      justifyContent: 'center',
       '@media print': {
         minHeight: '100vh',
         width: '100vw',
@@ -784,7 +780,7 @@ const Worksheet = ({
       <Box sx={{
         width: '100%',
         maxWidth: '1200px',
-        padding: isStudentView ? '24px' : 0,
+        padding: '24px',
         boxSizing: 'border-box'
       }}>
         {settings.includeCodeBreaker && (
@@ -858,33 +854,42 @@ const Worksheet = ({
 
         {isStudentView && (
           <Box sx={{
-            mb: 4,
+            mb: 3,
             width: '100%',
-            maxWidth: '600px',
+            maxWidth: '800px',
             mx: 'auto',
-            textAlign: 'center'
+            textAlign: 'center',
+            p: 1,
+            borderRadius: 1
           }}>
             <Typography 
-              variant="subtitle1" 
+              variant="body2" 
               sx={{ 
                 mb: 1,
                 color: theme.textColor,
                 fontFamily: theme.font.title,
-                fontSize: '0.9rem'
+                fontSize: '0.9rem',
+                opacity: 0.9,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1
               }}
             >
+              <span role="img" aria-label="pencil">✏️</span>
               Progress: {Object.keys(studentAnswers).length} of {problems.length} problems solved
             </Typography>
             <LinearProgress 
               variant="determinate" 
               value={(Object.keys(studentAnswers).length / problems.length) * 100}
               sx={{
-                height: 8,
-                borderRadius: 4,
-                bgcolor: 'rgba(255, 182, 193, 0.3)',
+                height: 6,
+                borderRadius: 3,
+                bgcolor: 'rgba(0, 0, 0, 0.05)',
                 '& .MuiLinearProgress-bar': {
                   bgcolor: theme.textColor,
-                  borderRadius: 4
+                  opacity: 0.6,
+                  borderRadius: 3
                 }
               }}
             />

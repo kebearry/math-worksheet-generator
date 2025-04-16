@@ -36,6 +36,15 @@ const StudentView = () => {
       setShowFeedback(true);
       const correct = checkAnswers(newAnswers, problems);
       setFeedback({ correct, total: problems.length });
+      
+      // Show snackbar message when all problems are solved
+      if (Object.keys(newAnswers).length === problems.length) {
+        const message = correct === problems.length 
+          ? `🎉 Great job! You got all ${problems.length} problems correct!` 
+          : `You got ${correct} out of ${problems.length} problems correct. Keep trying!`;
+        setSnackbarMessage(message);
+        setSnackbarOpen(true);
+      }
     }
   };
 
