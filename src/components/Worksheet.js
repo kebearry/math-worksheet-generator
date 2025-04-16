@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Grid, TextField } from '@mui/material';
+import { Box, Typography, Grid, TextField, LinearProgress } from '@mui/material';
 
 const Worksheet = ({ 
   settings, 
@@ -21,17 +21,12 @@ const Worksheet = ({
       message: "'Courier New', monospace"
     }
   }, 
-  isStudentView = false 
+  isStudentView = false,
+  studentAnswers = {},
+  onAnswerChange = () => {},
+  showFeedback = false
 }) => {
-  const [studentAnswers, setStudentAnswers] = useState({});
   const [secretMessageInputs, setSecretMessageInputs] = useState({});
-
-  const handleAnswerChange = (problemIndex, value) => {
-    setStudentAnswers(prev => ({
-      ...prev,
-      [problemIndex]: value
-    }));
-  };
 
   const handleSecretMessageChange = (wordIndex, charIndex, value) => {
     setSecretMessageInputs(prev => ({
@@ -576,10 +571,203 @@ const Worksheet = ({
     );
   };
 
+  const renderProblem = (problem, index) => {
+    const studentAnswer = studentAnswers[index] ? parseInt(studentAnswers[index]) : null;
+    const isCorrect = showFeedback && studentAnswer === problem.answer;
+    const isIncorrect = showFeedback && studentAnswer !== null && studentAnswer !== problem.answer;
+    
+    return (
+      <Box 
+        key={index}
+        sx={{ 
+          p: 2,
+          mb: 2,
+          position: 'relative',
+          '@media print': {
+            pageBreakInside: 'avoid'
+          },
+          ...(showFeedback && {
+            transition: 'all 0.3s ease-in-out',
+            borderRadius: '8px',
+            ...(isCorrect && {
+              bgcolor: 'rgba(76, 175, 80, 0.08)',
+              border: '1px solid rgba(76, 175, 80, 0.5)',
+              boxShadow: '0 0 8px rgba(76, 175, 80, 0.15)'
+            }),
+            ...(isIncorrect && {
+              bgcolor: 'rgba(244, 67, 54, 0.08)',
+              border: '1px solid rgba(244, 67, 54, 0.5)',
+              boxShadow: '0 0 8px rgba(244, 67, 54, 0.15)'
+            })
+          })
+        }}
+      >
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2
+        }}>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontFamily: theme.font.problems,
+              color: theme.textColor,
+              fontSize: '1.2em',
+              flex: '0 0 auto'
+            }}
+          >
+            {problem.firstNum} {problem.operation} {problem.secondNum} =
+          </Typography>
+          <Box 
+            sx={{ 
+              flex: 1,
+              position: 'relative',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center'
+            }} 
+          >
+            {isStudentView ? (
+              <TextField
+                variant="standard"
+                value={studentAnswers[index] || ''}
+                onChange={(e) => onAnswerChange(index, e.target.value)}
+                sx={{
+                  width: { xs: '200px', sm: '250px', md: '300px' },
+                  '& .MuiInput-underline:before': {
+                    borderBottomColor: theme.textColor
+                  },
+                  '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
+                    borderBottomColor: theme.textColor
+                  },
+                  '& .MuiInput-underline:after': {
+                    borderBottomColor: theme.textColor
+                  },
+                  '& .MuiInputBase-input': {
+                    textAlign: 'center',
+                    fontSize: '1.1em',
+                    fontFamily: theme.font.problems,
+                    color: theme.textColor,
+                    padding: '4px 0'
+                  }
+                }}
+                inputProps={{
+                  'aria-label': `Answer for ${problem.firstNum} ${problem.operation} ${problem.secondNum}`,
+                  type: 'number',
+                  pattern: '[0-9]*'
+                }}
+              />
+            ) : (
+              <>
+                <Box sx={{ 
+                  position: 'absolute',
+                  bottom: '0',
+                  left: '0',
+                  right: '0',
+                  borderBottom: `1px solid ${theme.textColor}`
+                }} />
+                {settings.includeCodeBreaker && (
+                  <Typography 
+                    sx={{ 
+                      position: 'absolute',
+                      top: '0',
+                      right: '8px',
+                      color: '#1565c0',
+                      fontSize: '0.9em',
+                      fontFamily: theme.font.problems,
+                      bgcolor: 'rgba(25, 118, 210, 0.12)',
+                      px: 1.5,
+                      py: 0.25,
+                      borderRadius: 1,
+                      border: '1px dashed #1565c0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      whiteSpace: 'nowrap',
+                      height: 'fit-content'
+                    }}
+                  >
+                    <span style={{ 
+                      fontSize: '0.85em', 
+                      opacity: 0.9,
+                      fontWeight: 'bold'
+                    }}>
+                      ANS:
+                    </span>
+                    {problem.answer}
+                  </Typography>
+                )}
+              </>
+            )}
+          </Box>
+        </Box>
+        {showFeedback && (
+          <Box 
+            sx={{ 
+              position: 'absolute',
+              right: isIncorrect ? '16px' : '8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              borderRadius: '20px',
+              py: 0.5,
+              px: 1.5,
+              ...(isCorrect && {
+                color: '#4caf50',
+                bgcolor: 'rgba(76, 175, 80, 0.12)'
+              }),
+              ...(isIncorrect && {
+                color: '#f44336',
+                bgcolor: 'rgba(244, 67, 54, 0.12)'
+              })
+            }}
+          >
+            {isCorrect && (
+              <Typography sx={{ 
+                fontSize: '1.1rem',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                ✓
+              </Typography>
+            )}
+            {isIncorrect && (
+              <Typography sx={{ 
+                fontSize: '0.9rem',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}>
+                <span style={{ fontSize: '1.1rem' }}>✗</span>
+                {problem.answer}
+              </Typography>
+            )}
+          </Box>
+        )}
+      </Box>
+    );
+  };
+
   return (
     <Box sx={{ 
-      p: 3,
       bgcolor: theme.colors.background,
+      ...(isStudentView ? {
+        minHeight: '100vh',
+        width: '100vw',
+        margin: 0,
+        padding: 0,
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        display: 'flex',
+        justifyContent: 'center'
+      } : {
+        p: 3
+      }),
       '@media print': {
         minHeight: '100vh',
         width: '100vw',
@@ -594,9 +782,10 @@ const Worksheet = ({
       }
     }}>
       <Box sx={{
+        width: '100%',
         maxWidth: '1200px',
-        margin: '0 auto',
-        width: '100%'
+        padding: isStudentView ? '24px' : 0,
+        boxSizing: 'border-box'
       }}>
         {settings.includeCodeBreaker && (
           <Box 
@@ -667,6 +856,41 @@ const Worksheet = ({
           <span role="img" aria-label="sparkles" style={{ fontSize: '1.5em' }}>✨</span>
         </Box>
 
+        {isStudentView && (
+          <Box sx={{
+            mb: 4,
+            width: '100%',
+            maxWidth: '600px',
+            mx: 'auto',
+            textAlign: 'center'
+          }}>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                mb: 1,
+                color: theme.textColor,
+                fontFamily: theme.font.title,
+                fontSize: '0.9rem'
+              }}
+            >
+              Progress: {Object.keys(studentAnswers).length} of {problems.length} problems solved
+            </Typography>
+            <LinearProgress 
+              variant="determinate" 
+              value={(Object.keys(studentAnswers).length / problems.length) * 100}
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                bgcolor: 'rgba(255, 182, 193, 0.3)',
+                '& .MuiLinearProgress-bar': {
+                  bgcolor: theme.textColor,
+                  borderRadius: 4
+                }
+              }}
+            />
+          </Box>
+        )}
+
         <Grid container spacing={3} sx={{
           '@media print': {
             display: 'grid',
@@ -683,118 +907,9 @@ const Worksheet = ({
               padding: '0 !important'
             }
           }}>
-            {problems.slice(0, Math.ceil(problems.length / 2)).map((problem, index) => (
-              <Box 
-                key={index}
-                sx={{ 
-                  p: 2,
-                  mb: 2,
-                  '@media print': {
-                    pageBreakInside: 'avoid'
-                  }
-                }}
-              >
-                <Box sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2
-                }}>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontFamily: theme.font.problems,
-                      color: theme.textColor,
-                      fontSize: '1.2em',
-                      flex: '0 0 auto'
-                    }}
-                  >
-                    {problem.firstNum} {problem.operation} {problem.secondNum} =
-                  </Typography>
-                  <Box 
-                    sx={{ 
-                      flex: 1,
-                      position: 'relative',
-                      height: '32px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }} 
-                  >
-                    {isStudentView ? (
-                      <TextField
-                        variant="standard"
-                        value={studentAnswers[index] || ''}
-                        onChange={(e) => handleAnswerChange(index, e.target.value)}
-                        sx={{
-                          width: { xs: '200px', sm: '250px', md: '300px' },
-                          '& .MuiInput-underline:before': {
-                            borderBottomColor: theme.textColor
-                          },
-                          '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
-                            borderBottomColor: theme.textColor
-                          },
-                          '& .MuiInput-underline:after': {
-                            borderBottomColor: theme.textColor
-                          },
-                          '& .MuiInputBase-input': {
-                            textAlign: 'center',
-                            fontSize: '1.1em',
-                            fontFamily: theme.font.problems,
-                            color: theme.textColor,
-                            padding: '4px 0'
-                          }
-                        }}
-                        inputProps={{
-                          'aria-label': `Answer for ${problem.firstNum} ${problem.operation} ${problem.secondNum}`,
-                          type: 'number',
-                          pattern: '[0-9]*'
-                        }}
-                      />
-                    ) : (
-                      <>
-                        <Box sx={{ 
-                          position: 'absolute',
-                          bottom: '0',
-                          left: '0',
-                          right: '0',
-                          borderBottom: `1px solid ${theme.textColor}`
-                        }} />
-                        {settings.includeCodeBreaker && (
-                          <Typography 
-                            sx={{ 
-                              position: 'absolute',
-                              top: '0',
-                              right: '8px',
-                              color: '#1565c0',
-                              fontSize: '0.9em',
-                              fontFamily: theme.font.problems,
-                              bgcolor: 'rgba(25, 118, 210, 0.12)',
-                              px: 1.5,
-                              py: 0.25,
-                              borderRadius: 1,
-                              border: '1px dashed #1565c0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 0.5,
-                              whiteSpace: 'nowrap',
-                              height: 'fit-content'
-                            }}
-                          >
-                            <span style={{ 
-                              fontSize: '0.85em', 
-                              opacity: 0.9,
-                              fontWeight: 'bold'
-                            }}>
-                              ANS:
-                            </span>
-                            {problem.answer}
-                          </Typography>
-                        )}
-                      </>
-                    )}
-                  </Box>
-                </Box>
-              </Box>
-            ))}
+            {problems.slice(0, Math.ceil(problems.length / 2)).map((problem, index) => 
+              renderProblem(problem, index)
+            )}
           </Grid>
           <Grid item xs={12} md={6} sx={{
             '@media print': {
@@ -804,118 +919,9 @@ const Worksheet = ({
               padding: '0 !important'
             }
           }}>
-            {problems.slice(Math.ceil(problems.length / 2)).map((problem, index) => (
-              <Box 
-                key={index}
-                sx={{ 
-                  p: 2,
-                  mb: 2,
-                  '@media print': {
-                    pageBreakInside: 'avoid'
-                  }
-                }}
-              >
-                <Box sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2
-                }}>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontFamily: theme.font.problems,
-                      color: theme.textColor,
-                      fontSize: '1.2em',
-                      flex: '0 0 auto'
-                    }}
-                  >
-                    {problem.firstNum} {problem.operation} {problem.secondNum} =
-                  </Typography>
-                  <Box 
-                    sx={{ 
-                      flex: 1,
-                      position: 'relative',
-                      height: '32px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }} 
-                  >
-                    {isStudentView ? (
-                      <TextField
-                        variant="standard"
-                        value={studentAnswers[index + Math.ceil(problems.length / 2)] || ''}
-                        onChange={(e) => handleAnswerChange(index + Math.ceil(problems.length / 2), e.target.value)}
-                        sx={{
-                          width: { xs: '200px', sm: '250px', md: '300px' },
-                          '& .MuiInput-underline:before': {
-                            borderBottomColor: theme.textColor
-                          },
-                          '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
-                            borderBottomColor: theme.textColor
-                          },
-                          '& .MuiInput-underline:after': {
-                            borderBottomColor: theme.textColor
-                          },
-                          '& .MuiInputBase-input': {
-                            textAlign: 'center',
-                            fontSize: '1.1em',
-                            fontFamily: theme.font.problems,
-                            color: theme.textColor,
-                            padding: '4px 0'
-                          }
-                        }}
-                        inputProps={{
-                          'aria-label': `Answer for ${problem.firstNum} ${problem.operation} ${problem.secondNum}`,
-                          type: 'number',
-                          pattern: '[0-9]*'
-                        }}
-                      />
-                    ) : (
-                      <>
-                        <Box sx={{ 
-                          position: 'absolute',
-                          bottom: '0',
-                          left: '0',
-                          right: '0',
-                          borderBottom: `1px solid ${theme.textColor}`
-                        }} />
-                        {settings.includeCodeBreaker && (
-                          <Typography 
-                            sx={{ 
-                              position: 'absolute',
-                              top: '0',
-                              right: '8px',
-                              color: '#1565c0',
-                              fontSize: '0.9em',
-                              fontFamily: theme.font.problems,
-                              bgcolor: 'rgba(25, 118, 210, 0.12)',
-                              px: 1.5,
-                              py: 0.25,
-                              borderRadius: 1,
-                              border: '1px dashed #1565c0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 0.5,
-                              whiteSpace: 'nowrap',
-                              height: 'fit-content'
-                            }}
-                          >
-                            <span style={{ 
-                              fontSize: '0.85em', 
-                              opacity: 0.9,
-                              fontWeight: 'bold'
-                            }}>
-                              ANS:
-                            </span>
-                            {problem.answer}
-                          </Typography>
-                        )}
-                      </>
-                    )}
-                  </Box>
-                </Box>
-              </Box>
-            ))}
+            {problems.slice(Math.ceil(problems.length / 2)).map((problem, index) => 
+              renderProblem(problem, index + Math.ceil(problems.length / 2))
+            )}
           </Grid>
         </Grid>
 
