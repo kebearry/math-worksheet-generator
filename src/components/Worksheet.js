@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Typography, Grid} from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, Grid, TextField } from '@mui/material';
 
 const Worksheet = ({ settings, problems, theme = {
   colors: {
@@ -16,8 +16,24 @@ const Worksheet = ({ settings, problems, theme = {
     problems: "'Verdana', 'Segoe UI', sans-serif",
     message: "'Courier New', monospace"
   }
-} }) => {
+}, isStudentView = false }) => {
+  const [studentAnswers, setStudentAnswers] = useState({});
+  const [secretMessageInputs, setSecretMessageInputs] = useState({});
   const letterToNumber = problems.letterToNumber || {};
+
+  const handleAnswerChange = (problemIndex, value) => {
+    setStudentAnswers(prev => ({
+      ...prev,
+      [problemIndex]: value
+    }));
+  };
+
+  const handleSecretMessageChange = (wordIndex, charIndex, value) => {
+    setSecretMessageInputs(prev => ({
+      ...prev,
+      [`${wordIndex}-${charIndex}`]: value
+    }));
+  };
 
   const renderSecretMessage = () => {
     const message = settings.secretMessage.toUpperCase();
@@ -76,34 +92,73 @@ const Worksheet = ({ settings, problems, theme = {
                     
                     return (
                       <Box key={`${wordIndex}-${charIndex}`}>
-                        <Box 
-                          sx={{
-                            width: { xs: '24px', sm: '28px' },
-                            height: { xs: '24px', sm: '28px' },
-                            border: '1px solid rgba(255,255,255,0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            mb: 0.5,
-                            bgcolor: 'rgba(255,255,255,0.05)',
-                            boxShadow: 'inset 0 0 5px rgba(0,0,0,0.2)'
-                          }}
-                        >
-                          <Typography sx={{
-                            fontFamily: "'Courier New', monospace",
-                            fontSize: { xs: '14px', sm: '16px' },
-                            lineHeight: 1,
-                            color: theme.textColor,
-                            textShadow: theme.colors.background === '#1E1E1E' ? '0 0 2px rgba(255,255,255,0.5)' : 'none'
-                          }}>
-                            {settings.includeCodeBreaker || isPrefilled ? char : '_'}
-                          </Typography>
-                        </Box>
+                        {isStudentView && !isPrefilled ? (
+                          <TextField
+                            variant="standard"
+                            value={secretMessageInputs[`${wordIndex}-${charIndex}`] || ''}
+                            onChange={(e) => handleSecretMessageChange(wordIndex, charIndex, e.target.value)}
+                            sx={{
+                              width: { xs: '24px', sm: '24px' },
+                              '& .MuiInput-root': {
+                                width: { xs: '24px', sm: '24px' },
+                                height: { xs: '24px', sm: '24px' },
+                                border: '1px solid rgba(255,255,255,0.3)',
+                                bgcolor: 'rgba(255,255,255,0.05)',
+                                boxShadow: 'inset 0 0 5px rgba(0,0,0,0.2)',
+                                borderRadius: '0',
+                                mb: 0.5,
+                                '&::before, &::after': {
+                                  display: 'none'
+                                }
+                              },
+                              '& .MuiInputBase-input': {
+                                textAlign: 'center',
+                                fontSize: { xs: '14px', sm: '14px' },
+                                fontFamily: "'Courier New', monospace",
+                                color: theme.textColor,
+                                padding: '0',
+                                height: { xs: '24px', sm: '24px' },
+                                lineHeight: { xs: '24px', sm: '24px' },
+                                textTransform: 'uppercase',
+                                caretColor: theme.textColor
+                              }
+                            }}
+                            inputProps={{
+                              maxLength: 1,
+                              style: { textAlign: 'center' },
+                              'aria-label': `Letter for position ${wordIndex + 1}-${charIndex + 1}`
+                            }}
+                          />
+                        ) : (
+                          <Box 
+                            sx={{
+                              width: { xs: '24px', sm: '24px' },
+                              height: { xs: '24px', sm: '24px' },
+                              border: '1px solid rgba(255,255,255,0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              mb: 0.5,
+                              bgcolor: 'rgba(255,255,255,0.05)',
+                              boxShadow: 'inset 0 0 5px rgba(0,0,0,0.2)'
+                            }}
+                          >
+                            <Typography sx={{
+                              fontFamily: "'Courier New', monospace",
+                              fontSize: { xs: '14px', sm: '14px' },
+                              lineHeight: 1,
+                              color: theme.textColor,
+                              textShadow: theme.colors.background === '#1E1E1E' ? '0 0 2px rgba(255,255,255,0.5)' : 'none'
+                            }}>
+                              {settings.includeCodeBreaker || isPrefilled ? char : '_'}
+                            </Typography>
+                          </Box>
+                        )}
                         <Typography 
                           align="center"
                           sx={{ 
                             fontFamily: "'Courier New', monospace",
-                            fontSize: { xs: '12px', sm: '14px' },
+                            fontSize: { xs: '12px', sm: '12px' },
                             lineHeight: 1,
                             color: theme.textColor,
                             textShadow: theme.colors.background === '#1E1E1E' ? '0 0 2px rgba(255,255,255,0.5)' : 'none'
@@ -656,46 +711,80 @@ const Worksheet = ({ settings, problems, theme = {
                       position: 'relative',
                       height: '32px',
                       display: 'flex',
-                      alignItems: 'flex-end'
+                      alignItems: 'center'
                     }} 
                   >
-                    <Box sx={{ 
-                      position: 'absolute',
-                      bottom: '0',
-                      left: '0',
-                      right: '0',
-                      borderBottom: `1px solid ${theme.textColor}`
-                    }} />
-                    {settings.includeCodeBreaker && (
-                      <Typography 
-                        sx={{ 
-                          position: 'absolute',
-                          top: '0',
-                          right: '8px',
-                          color: '#1565c0',
-                          fontSize: '0.9em',
-                          fontFamily: theme.font.problems,
-                          bgcolor: 'rgba(25, 118, 210, 0.12)',
-                          px: 1.5,
-                          py: 0.25,
-                          borderRadius: 1,
-                          border: '1px dashed #1565c0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 0.5,
-                          whiteSpace: 'nowrap',
-                          height: 'fit-content'
+                    {isStudentView ? (
+                      <TextField
+                        variant="standard"
+                        value={studentAnswers[index] || ''}
+                        onChange={(e) => handleAnswerChange(index, e.target.value)}
+                        sx={{
+                          width: { xs: '200px', sm: '250px', md: '300px' },
+                          '& .MuiInput-underline:before': {
+                            borderBottomColor: theme.textColor
+                          },
+                          '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
+                            borderBottomColor: theme.textColor
+                          },
+                          '& .MuiInput-underline:after': {
+                            borderBottomColor: theme.textColor
+                          },
+                          '& .MuiInputBase-input': {
+                            textAlign: 'center',
+                            fontSize: '1.1em',
+                            fontFamily: theme.font.problems,
+                            color: theme.textColor,
+                            padding: '4px 0'
+                          }
                         }}
-                      >
-                        <span style={{ 
-                          fontSize: '0.85em', 
-                          opacity: 0.9,
-                          fontWeight: 'bold'
-                        }}>
-                          ANS:
-                        </span>
-                        {problem.answer}
-                      </Typography>
+                        inputProps={{
+                          'aria-label': `Answer for ${problem.firstNum} ${problem.operation} ${problem.secondNum}`,
+                          type: 'number',
+                          pattern: '[0-9]*'
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <Box sx={{ 
+                          position: 'absolute',
+                          bottom: '0',
+                          left: '0',
+                          right: '0',
+                          borderBottom: `1px solid ${theme.textColor}`
+                        }} />
+                        {settings.includeCodeBreaker && (
+                          <Typography 
+                            sx={{ 
+                              position: 'absolute',
+                              top: '0',
+                              right: '8px',
+                              color: '#1565c0',
+                              fontSize: '0.9em',
+                              fontFamily: theme.font.problems,
+                              bgcolor: 'rgba(25, 118, 210, 0.12)',
+                              px: 1.5,
+                              py: 0.25,
+                              borderRadius: 1,
+                              border: '1px dashed #1565c0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              whiteSpace: 'nowrap',
+                              height: 'fit-content'
+                            }}
+                          >
+                            <span style={{ 
+                              fontSize: '0.85em', 
+                              opacity: 0.9,
+                              fontWeight: 'bold'
+                            }}>
+                              ANS:
+                            </span>
+                            {problem.answer}
+                          </Typography>
+                        )}
+                      </>
                     )}
                   </Box>
                 </Box>
@@ -743,46 +832,80 @@ const Worksheet = ({ settings, problems, theme = {
                       position: 'relative',
                       height: '32px',
                       display: 'flex',
-                      alignItems: 'flex-end'
+                      alignItems: 'center'
                     }} 
                   >
-                    <Box sx={{ 
-                      position: 'absolute',
-                      bottom: '0',
-                      left: '0',
-                      right: '0',
-                      borderBottom: `1px solid ${theme.textColor}`
-                    }} />
-                    {settings.includeCodeBreaker && (
-                      <Typography 
-                        sx={{ 
-                          position: 'absolute',
-                          top: '0',
-                          right: '8px',
-                          color: '#1565c0',
-                          fontSize: '0.9em',
-                          fontFamily: theme.font.problems,
-                          bgcolor: 'rgba(25, 118, 210, 0.12)',
-                          px: 1.5,
-                          py: 0.25,
-                          borderRadius: 1,
-                          border: '1px dashed #1565c0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 0.5,
-                          whiteSpace: 'nowrap',
-                          height: 'fit-content'
+                    {isStudentView ? (
+                      <TextField
+                        variant="standard"
+                        value={studentAnswers[index + Math.ceil(problems.length / 2)] || ''}
+                        onChange={(e) => handleAnswerChange(index + Math.ceil(problems.length / 2), e.target.value)}
+                        sx={{
+                          width: { xs: '200px', sm: '250px', md: '300px' },
+                          '& .MuiInput-underline:before': {
+                            borderBottomColor: theme.textColor
+                          },
+                          '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
+                            borderBottomColor: theme.textColor
+                          },
+                          '& .MuiInput-underline:after': {
+                            borderBottomColor: theme.textColor
+                          },
+                          '& .MuiInputBase-input': {
+                            textAlign: 'center',
+                            fontSize: '1.1em',
+                            fontFamily: theme.font.problems,
+                            color: theme.textColor,
+                            padding: '4px 0'
+                          }
                         }}
-                      >
-                        <span style={{ 
-                          fontSize: '0.85em', 
-                          opacity: 0.9,
-                          fontWeight: 'bold'
-                        }}>
-                          ANS:
-                        </span>
-                        {problem.answer}
-                      </Typography>
+                        inputProps={{
+                          'aria-label': `Answer for ${problem.firstNum} ${problem.operation} ${problem.secondNum}`,
+                          type: 'number',
+                          pattern: '[0-9]*'
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <Box sx={{ 
+                          position: 'absolute',
+                          bottom: '0',
+                          left: '0',
+                          right: '0',
+                          borderBottom: `1px solid ${theme.textColor}`
+                        }} />
+                        {settings.includeCodeBreaker && (
+                          <Typography 
+                            sx={{ 
+                              position: 'absolute',
+                              top: '0',
+                              right: '8px',
+                              color: '#1565c0',
+                              fontSize: '0.9em',
+                              fontFamily: theme.font.problems,
+                              bgcolor: 'rgba(25, 118, 210, 0.12)',
+                              px: 1.5,
+                              py: 0.25,
+                              borderRadius: 1,
+                              border: '1px dashed #1565c0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              whiteSpace: 'nowrap',
+                              height: 'fit-content'
+                            }}
+                          >
+                            <span style={{ 
+                              fontSize: '0.85em', 
+                              opacity: 0.9,
+                              fontWeight: 'bold'
+                            }}>
+                              ANS:
+                            </span>
+                            {problem.answer}
+                          </Typography>
+                        )}
+                      </>
                     )}
                   </Box>
                 </Box>
