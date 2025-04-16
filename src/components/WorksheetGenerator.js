@@ -753,30 +753,41 @@ const WorksheetGenerator = ({ isStudentView = false }) => {
     setProblems(generateProblems());
   };
 
-  const generateWorksheetId = () => {
-    return Math.random().toString(36).substring(2, 15);
-  };
-
   const handleGenerateStudentLink = () => {
-    // Create a data object with current settings and problems
-    const worksheetData = {
-      settings: {
-        ...settings,
-        includeCodeBreaker: false  // Never include answer key in student view
-      },
-      problems: problems
-    };
+    try {
+      // Generate letterToNumber mapping
+      const letterToNumber = {};
+      problems.forEach(problem => {
+        if (problem.letter && problem.answer) {
+          letterToNumber[problem.letter] = problem.answer;
+        }
+      });
 
-    // Encode the data using encodeURIComponent to handle special characters
-    const encodedData = encodeURIComponent(JSON.stringify(worksheetData));
-    
-    // Create the student link with the encoded data
-    const studentLink = `${window.location.origin}/student?data=${encodedData}`;
-    
-    navigator.clipboard.writeText(studentLink).then(() => {
-      setSnackbarMessage('Student link copied to clipboard!');
+      // Create a data object with current settings and problems
+      const worksheetData = {
+        settings: {
+          ...settings,
+          includeCodeBreaker: false  // Never include answer key in student view
+        },
+        problems: problems,
+        letterToNumber: letterToNumber
+      };
+
+      // Encode the data as a base64 URL parameter
+      const encodedData = btoa(JSON.stringify(worksheetData));
+      
+      // Create the student link with the encoded data
+      const studentLink = `${window.location.origin}/student?data=${encodedData}`;
+      
+      navigator.clipboard.writeText(studentLink).then(() => {
+        setSnackbarMessage('Student link copied to clipboard!');
+        setSnackbarOpen(true);
+      });
+    } catch (error) {
+      console.error('Error generating student link:', error);
+      setSnackbarMessage('Error generating student link. Please try again.');
       setSnackbarOpen(true);
-    });
+    }
   };
 
   const handleSnackbarClose = () => {

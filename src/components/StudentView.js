@@ -1,12 +1,11 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import Worksheet from './Worksheet';
 import { Box, Typography } from '@mui/material';
 import { THEMES } from './WorksheetGenerator';
 
 const StudentView = () => {
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
+  const [searchParams] = useSearchParams();
   const encodedData = searchParams.get('data');
 
   if (!encodedData) {
@@ -20,17 +19,9 @@ const StudentView = () => {
   }
 
   try {
-    const decodedData = JSON.parse(decodeURIComponent(encodedData));
-    const { settings, problems } = decodedData;
+    const worksheetData = JSON.parse(atob(encodedData));
+    const { settings, problems, letterToNumber } = worksheetData;
     const theme = THEMES[settings.theme];
-
-    // Generate letterToNumber mapping from problems
-    const letterToNumber = {};
-    problems.forEach(problem => {
-      if (problem.letter && problem.answer) {
-        letterToNumber[problem.letter] = problem.answer;
-      }
-    });
 
     return (
       <Worksheet
@@ -43,11 +34,11 @@ const StudentView = () => {
       />
     );
   } catch (error) {
-    console.error('Error decoding worksheet:', error);
+    console.error('Error parsing worksheet data:', error);
     return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
         <Typography variant="h5" color="error">
-          Error loading worksheet. Please ask your teacher for a new link.
+          Invalid worksheet data. Please ask your teacher for a new link.
         </Typography>
       </Box>
     );
