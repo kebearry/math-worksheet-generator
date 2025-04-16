@@ -25,6 +25,8 @@ import {
   DialogActions
 } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import Worksheet from './Worksheet';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
@@ -192,10 +194,49 @@ const WorksheetGenerator = () => {
   const prevSettings = useRef(initialState);
 
   const worksheetRef = useRef();
+  
+  const isMobile = useCallback(() => {
+    const userAgent = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const screenWidth = window.innerWidth;
+    return userAgent || screenWidth <= 768;
+  }, []);
 
-  const handlePrint = useReactToPrint({
+  const reactToPrintContent = useReactToPrint({
     content: () => worksheetRef.current,
   });
+
+  const handlePrint = useCallback(async () => {
+    if (isMobile()) {
+      try {
+        setIsLoading(true);
+        const worksheet = worksheetRef.current;
+        const canvas = await html2canvas(worksheet, {
+          scale: 2,
+          useCORS: true,
+          logging: false
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'px'
+        });
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${settings.title.toLowerCase().replace(/\s+/g, '-')}.pdf`);
+      } catch (error) {
+        console.error('PDF generation failed:', error);
+        setError('Could not generate PDF. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      reactToPrintContent();
+    }
+  }, [settings.title, reactToPrintContent, isMobile]);
 
   // Fetch templates on component mount
   useEffect(() => {
