@@ -755,15 +755,19 @@ const Worksheet = ({
   return (
     <Box sx={{ 
       bgcolor: theme.colors.background,
-      minHeight: '100vh',
-      width: '100vw',
-      margin: 0,
-      padding: 0,
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      display: 'flex',
-      justifyContent: 'center',
+      ...(isStudentView ? {
+        minHeight: '100vh',
+        width: '100vw',
+        margin: 0,
+        padding: 0,
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        display: 'flex',
+        justifyContent: 'center'
+      } : {
+        p: 3
+      }),
       '@media print': {
         minHeight: '100vh',
         width: '100vw',
@@ -780,7 +784,7 @@ const Worksheet = ({
       <Box sx={{
         width: '100%',
         maxWidth: '1200px',
-        padding: '24px',
+        padding: isStudentView ? '24px' : 0,
         boxSizing: 'border-box'
       }}>
         {settings.includeCodeBreaker && (
